@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -13,19 +14,19 @@ import (
 )
 
 func main() {
-	// Muat konfigurasi dari .env
-	if err := config.LoadConfig(); err != nil {
+	cfg, err := config.LoadConfig()
+	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
 	// Inisialisasi database
-	db, err := database.InitDatabase()
+	db, err := database.InitDatabase(cfg)
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
 	// Inisialisasi arsitektur (Dependency Injection)
-	userRepository := user.NewGORMRepository(db)
+	userRepository := user.NewUserRepository(db)
 	userService := user.NewUserService(userRepository)
 	userHandler := user.NewUserHandler(userService)
 
@@ -37,6 +38,6 @@ func main() {
 	router.SetupRoutes(app, userHandler)
 
 	// Jalankan server
-	port := os.Getenv("SERVER_PORT")
+	port := fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
 	log.Fatal(app.Listen(port))
 }
