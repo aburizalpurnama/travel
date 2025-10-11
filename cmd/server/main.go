@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
+	"github.com/aburizalpurnama/travel/internal/app/database"
+	"github.com/aburizalpurnama/travel/internal/app/domain/user"
+	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
-	"github.com/aburizalpurnama/travel/internal/database"
-	"github.com/aburizalpurnama/travel/internal/router"
-	"github.com/aburizalpurnama/travel/internal/user"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -19,25 +19,28 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	// Inisialisasi database
 	db, err := database.InitDatabase(cfg)
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
-	// Inisialisasi arsitektur (Dependency Injection)
+	routerOpts := injectDependencies(db)
+
+	app := fiber.New()
+	app.Use(logger.New())
+
+	router.SetupRoutesV1(app, routerOpts)
+
+	port := fmt.Sprintf(":%d", cfg.ServerPort)
+	log.Fatal(app.Listen(port))
+}
+
+func injectDependencies(db *gorm.DB) *router.Option {
 	userRepository := user.NewUserRepository(db)
 	userService := user.NewUserService(userRepository)
 	userHandler := user.NewUserHandler(userService)
 
-	// Inisialisasi Fiber
-	app := fiber.New()
-	app.Use(logger.New())
-
-	// Setup rute
-	router.SetupRoutes(app, userHandler)
-
-	// Jalankan server
-	port := fmt.Sprintf(":%s", os.Getenv("SERVER_PORT"))
-	log.Fatal(app.Listen(port))
+	return &router.Option{
+		UserHandler: userHandler,
+	}
 }

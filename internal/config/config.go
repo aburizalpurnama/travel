@@ -22,6 +22,7 @@ type Config struct {
 	DBMaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" envDefault:"10"`
 	DBMaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" envDefault:"100"`
 	DBConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"1h"`
+	DBLogLevel        string        `env:"DB_LOG_LEVEL"`
 
 	RedisHost     string `env:"REDIS_HOST"`
 	RedisPort     int    `env:"REDIS_PORT"`

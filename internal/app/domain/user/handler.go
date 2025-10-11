@@ -3,22 +3,23 @@ package user
 import (
 	"strconv"
 
-	"github.com/aburizalpurnama/travel/internal/domain"
+	"github.com/aburizalpurnama/travel/internal/app/contract"
+	"github.com/aburizalpurnama/travel/internal/app/payload"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
 
 type UserHandler struct {
-	service domain.UserService
+	service contract.UserService
 }
 
 // NewUserHandler membuat instance baru dari UserHandler
-func NewUserHandler(service domain.UserService) *UserHandler {
+func NewUserHandler(service contract.UserService) *UserHandler {
 	return &UserHandler{service: service}
 }
 
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
-	var req domain.UserCreateRequest
+	var req payload.CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -28,7 +29,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	user, err := h.service.CreateUser(req)
+	user, err := h.service.CreateUser(c.Context(), req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -37,7 +38,7 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
-	users, err := h.service.GetAllUsers()
+	users, err := h.service.GetAllUsers(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -50,7 +51,7 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	user, err := h.service.GetUserByID(uint(id))
+	user, err := h.service.GetUserByID(c.Context(), uint(id))
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
