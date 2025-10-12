@@ -31,3 +31,13 @@ type User struct {
 func (User) TableName() string {
 	return "user.users"
 }
+
+// in defalt berisi kolom" yang punya index
+type UserFilter struct {
+	ID         *uint
+	UID        *string
+	Email      *string
+	IsActive   *bool
+	IsVerified *bool
+	Role       *string
+}

@@ -7,6 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/crypto v0.25.0
 	gorm.io/datatypes v1.2.7
