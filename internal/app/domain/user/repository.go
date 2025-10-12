@@ -6,6 +6,7 @@ import (
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
 	"github.com/aburizalpurnama/travel/internal/app/model"
+	"github.com/aburizalpurnama/travel/internal/pkg/gormhelper"
 	"github.com/aburizalpurnama/travel/internal/pkg/paginator"
 	"gorm.io/gorm"
 )
@@ -19,62 +20,32 @@ func NewUserRepository(db *gorm.DB) contract.UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) FindAll(ctx context.Context, opts paginator.OffsetBasedOption, filter model.UserFilter) (users []model.User, err error) {
-	db := r.db.Where("deleted_on IS NULL")
+func (r *userRepository) FindAll(ctx context.Context, page *int, size *int, filter *model.UserFilter) (users []model.User, err error) {
+	query := r.db.Where("deleted_on IS NULL")
 
-	if filter.ID != nil {
-		db.Where("id", filter.ID)
+	query, err = gormhelper.ParseFilter(query, filter)
+	if err != nil {
+		return nil, err
 	}
 
-	if filter.UID != nil {
-		db.Where("uid", filter.UID)
+	if page != nil && size != nil {
+		offset := paginator.GetOffset(*page, *size)
+		query.Offset(offset).Limit(*size)
 	}
 
-	if filter.Email != nil {
-		db.Where("email", filter.Email)
-	}
-
-	if filter.IsActive != nil {
-		db.Where("is_active", filter.IsActive)
-	}
-
-	if filter.IsVerified != nil {
-		db.Where("is_verified", filter.IsVerified)
-	}
-
-	if opts.Page != nil && opts.Size != nil {
-		offset := paginator.GetOffset(*opts.Page, *opts.Size)
-		db.Offset(offset).Limit(*opts.Size)
-	}
-
-	err = db.Find(&users).Error
+	err = query.Find(&users).Error
 	return users, err
 }
 
-func (r *userRepository) Count(ctx context.Context, filter model.UserFilter) (count int64, err error) {
-	db := r.db.Model(&model.User{}).Where("deleted_on IS NULL")
+func (r *userRepository) Count(ctx context.Context, filter *model.UserFilter) (count int64, err error) {
+	query := r.db.Model(&model.User{}).Where("deleted_on IS NULL")
 
-	if filter.ID != nil {
-		db.Where("id", filter.ID)
+	query, err = gormhelper.ParseFilter(query, filter)
+	if err != nil {
+		return 0, err
 	}
 
-	if filter.UID != nil {
-		db.Where("uid", filter.UID)
-	}
-
-	if filter.Email != nil {
-		db.Where("email", filter.Email)
-	}
-
-	if filter.IsActive != nil {
-		db.Where("is_active", filter.IsActive)
-	}
-
-	if filter.IsVerified != nil {
-		db.Where("is_verified", filter.IsVerified)
-	}
-
-	err = db.Count(&count).Error
+	err = query.Count(&count).Error
 	if err != nil {
 		return 0, err
 	}
@@ -105,6 +76,5 @@ func (r *userRepository) Update(ctx context.Context, user *model.User) (*model.U
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uint) error {
-	// Soft delete
 	return r.db.Model(&model.User{}).Where("id = ?", id).Update("deleted_on", time.Now()).Error
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/aburizalpurnama/travel/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
@@ -19,7 +20,9 @@ func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
 		cfg.DBTimezone,
 	)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(getLoggerLevel(cfg.DBLogLevel)),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -29,4 +32,17 @@ func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
 
 	fmt.Println("Database connection successful")
 	return db, nil
+}
+
+func getLoggerLevel(v string) logger.LogLevel {
+	switch v {
+	case "error":
+		return logger.Error
+	case "warn":
+		return logger.Warn
+	case "info":
+		return logger.Info
+	default:
+		return logger.Silent
+	}
 }

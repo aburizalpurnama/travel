@@ -42,17 +42,17 @@ func (s *userService) CreateUser(ctx context.Context, req payload.UserCreateRequ
 }
 
 func (s *userService) GetAllUsers(ctx context.Context, req payload.UserGetAllRequest) ([]payload.UserResponse, *response.Pagination, error) {
-	var err error
 	var count int64
 	var users []model.User
+	var err error
 
 	wg := sync.WaitGroup{}
 	wg.Go(func() {
-		count, err = s.repo.Count(ctx, req.Filter)
+		count, err = s.repo.Count(ctx, req.UserFilter)
 	})
 
 	wg.Go(func() {
-		users, err = s.repo.FindAll(ctx, req.Option, req.Filter)
+		users, err = s.repo.FindAll(ctx, req.Page, req.Size, req.UserFilter)
 	})
 
 	wg.Wait()
@@ -68,12 +68,12 @@ func (s *userService) GetAllUsers(ctx context.Context, req payload.UserGetAllReq
 		return nil, nil, err
 	}
 
-	if req.Option.Page != nil && req.Option.Size != nil {
-		pagination.CurrentPage = req.Option.Page
-		pagination.PageSize = req.Option.Size
+	if req.Page != nil && req.Size != nil {
+		pagination.CurrentPage = req.Page
+		pagination.PageSize = req.Size
 		pagination.TotalItems = &count
 
-		totalPages := int(count / int64(*req.Option.Size))
+		totalPages := int(count / int64(*req.Size))
 		pagination.TotalPages = &totalPages
 	}
 

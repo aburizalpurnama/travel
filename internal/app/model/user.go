@@ -32,12 +32,12 @@ func (User) TableName() string {
 	return "user.users"
 }
 
-// in defalt berisi kolom" yang punya index
 type UserFilter struct {
-	ID         *uint
-	UID        *string
-	Email      *string
-	IsActive   *bool
-	IsVerified *bool
-	Role       *string
+	ID         *uint   `query:"id"`
+	UID        *string `query:"uid"`
+	Email      *string `query:"email"`
+	IsActive   *bool   `query:"is_active"`
+	IsVerified *bool   `query:"is_verified"`
+	Role       *string `query:"role"`
+	Search     *string `query:"search" search:"full_name,email,phone"`
 }

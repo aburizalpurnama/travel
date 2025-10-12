@@ -4,9 +4,7 @@ import (
 	"strconv"
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
-	"github.com/aburizalpurnama/travel/internal/app/model"
 	"github.com/aburizalpurnama/travel/internal/app/payload"
-	"github.com/aburizalpurnama/travel/internal/pkg/paginator"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -41,43 +39,14 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
-	option := paginator.OffsetBasedOption{}
-	filter := model.UserFilter{}
-
-	if page, err := strconv.Atoi(c.Query("page")); err == nil {
-		option.Page = &page
+	req := payload.UserGetAllRequest{}
+	if err := c.QueryParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if size, err := strconv.Atoi(c.Query("size")); err == nil {
-		option.Size = &size
-	}
+	req.SetDefault()
 
-	if id, err := strconv.Atoi(c.Query("id")); err == nil {
-		id := uint(id)
-		filter.ID = &id
-	}
-
-	if uid := c.Query("uid"); uid != "" {
-		filter.UID = &uid
-	}
-
-	if email := c.Query("email"); email != "" {
-		filter.Email = &email
-	}
-
-	if isActive, err := strconv.ParseBool(c.Query("is_active")); err == nil {
-		filter.IsActive = &isActive
-	}
-
-	if isVerified, err := strconv.ParseBool(c.Query("is_verified")); err == nil {
-		filter.IsVerified = &isVerified
-	}
-
-	if role := c.Query("role"); role != "" {
-		filter.Role = &role
-	}
-
-	users, pagination, err := h.service.GetAllUsers(c.Context(), payload.UserGetAllRequest{Option: option, Filter: filter})
+	users, pagination, err := h.service.GetAllUsers(c.Context(), req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
