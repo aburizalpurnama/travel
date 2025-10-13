@@ -20,8 +20,13 @@ func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
 		cfg.DBTimezone,
 	)
 
+	logLevel := getLogLevel(cfg.AppEnv)
+	if cfg.DBLogLevel != "" {
+		logLevel = convertLogLevel(cfg.DBLogLevel)
+	}
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(getLoggerLevel(cfg.DBLogLevel)),
+		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
 		return nil, err
@@ -34,7 +39,20 @@ func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
 	return db, nil
 }
 
-func getLoggerLevel(v string) logger.LogLevel {
+func getLogLevel(v string) logger.LogLevel {
+	switch v {
+	case "development":
+		return logger.Info
+	case "staging":
+		return logger.Info
+	case "production":
+		return logger.Warn
+	default:
+		return logger.Info
+	}
+}
+
+func convertLogLevel(v string) logger.LogLevel {
 	switch v {
 	case "error":
 		return logger.Error

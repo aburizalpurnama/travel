@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 
 	"github.com/aburizalpurnama/travel/internal/app/database"
 	"github.com/aburizalpurnama/travel/internal/app/domain/user"
 	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/logger"
+	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"gorm.io/gorm"
 )
 
@@ -24,10 +26,17 @@ func main() {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 
+	logLevel := getLogLevel(cfg.AppEnv)
+	if cfg.AppLogLevel != "" {
+		logLevel = convertLogLevel(cfg.AppLogLevel)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel}))
 	routerOpts := injectDependencies(db)
+	routerOpts.Logger = logger
 
 	app := fiber.New()
-	app.Use(logger.New())
+	app.Use(fiberLogger.New())
 
 	router.SetupRoutesV1(app, routerOpts)
 
@@ -42,5 +51,33 @@ func injectDependencies(db *gorm.DB) *router.Option {
 
 	return &router.Option{
 		UserHandler: userHandler,
+	}
+}
+
+func getLogLevel(v string) slog.Level {
+	switch v {
+	case "development":
+		return slog.LevelDebug
+	case "staging":
+		return slog.LevelInfo
+	case "production":
+		return slog.LevelWarn
+	default:
+		return slog.LevelInfo
+	}
+}
+
+func convertLogLevel(v string) slog.Level {
+	switch v {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }

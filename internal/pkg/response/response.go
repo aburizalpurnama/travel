@@ -1,8 +1,8 @@
 package response
 
-type APIResponse[T any] struct {
+type APIResponse struct {
 	Status     string      `json:"status"`
-	Data       T           `json:"data,omitempty"`
+	Data       any         `json:"data,omitempty"`
 	Error      *APIError   `json:"error,omitempty"`
 	Pagination *Pagination `json:"pagination,omitempty"`
 }
@@ -20,16 +20,16 @@ type Pagination struct {
 	PageSize    *int   `json:"page_size,omitempty"`
 }
 
-func Success[T any](data T, pagination *Pagination) APIResponse[T] {
-	return APIResponse[T]{
+func Success(data any, pagination *Pagination) APIResponse {
+	return APIResponse{
 		Status:     "success",
 		Data:       data,
 		Pagination: pagination,
 	}
 }
 
-func Error[T any](code, message string) APIResponse[T] {
-	return APIResponse[T]{
+func Error(code, message string) APIResponse {
+	return APIResponse{
 		Status: "error",
 		Error: &APIError{
 			Code:    code,
@@ -38,11 +38,11 @@ func Error[T any](code, message string) APIResponse[T] {
 	}
 }
 
-func ValidationError[T any](details any) APIResponse[T] {
-	return APIResponse[T]{
+func ValidationError(details any) APIResponse {
+	return APIResponse{
 		Status: "error",
 		Error: &APIError{
-			Code:    "VALIDATION_ERROR",
+			Code:    "VALIDAanyION_ERROR",
 			Message: "Your request is invalid. Please check the details.",
 			Details: details,
 		},

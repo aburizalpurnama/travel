@@ -8,9 +8,10 @@ import (
 )
 
 type Config struct {
-	AppEnv     string `env:"APP_ENV" envDefault:"development"`
-	AppName    string `env:"APP_NAME" envDefault:"TravelQu API"` // TODO: default value ganti dengan nama app pada builder
-	ServerPort int    `env:"SERVER_PORT" envDefault:"3000"`
+	AppEnv      string `env:"APP_ENV" envDefault:"development"`
+	AppName     string `env:"APP_NAME" envDefault:"TravelQu API"` // TODO: default value ganti dengan nama app pada builder
+	AppLogLevel string `env:"APP_LOG_LEVEL"`
+	ServerPort  int    `env:"SERVER_PORT" envDefault:"3000"`
 
 	DBHost            string        `env:"DB_HOST,required"`
 	DBPort            int           `env:"DB_PORT,required"`

@@ -22,20 +22,21 @@ func NewUserHandler(service contract.UserService) *UserHandler {
 func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	var req payload.UserCreateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
 	user, err := h.service.CreateUser(c.Context(), req)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		c.Locals("error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return c.Status(fiber.StatusCreated).JSON(response.Success(user, nil))
 }
 
 func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
@@ -48,7 +49,8 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 
 	users, pagination, err := h.service.GetAllUsers(c.Context(), req)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		c.Locals("error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
 	}
 
 	return c.JSON(response.Success(users, pagination))
@@ -62,7 +64,8 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 
 	user, err := h.service.GetUserByID(c.Context(), uint(id))
 	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		c.Locals("error", err)
+		return c.Status(fiber.StatusNotFound).JSON(response.Error("internal", err.Error()))
 	}
 	return c.JSON(user)
 }
