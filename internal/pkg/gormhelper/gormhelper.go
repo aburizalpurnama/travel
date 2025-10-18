@@ -39,6 +39,13 @@ func ParseFilter(db *gorm.DB, filter any) (*gorm.DB, error) {
 
 			var columnName string
 			queryTag := field.Tag.Get("query")
+
+			// Ignore field dengan tag `query:"-"`.
+			// Ignorance ini dapat dimanfaatkan untuk filter yang nama attributnya tidak sama dengan nama kolom pada database, misal filter untuk mendapatkan data dengan rentang created_on tertentu menggunakan start_date dan end_date. User perlu melakukan penyesuaian query secara manual di bagian repository untuk case tsb.
+			if queryTag == "-" {
+				continue
+			}
+
 			if queryTag != "" {
 				columnName = stdStrings.Split(queryTag, ";")[0]
 			}
