@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/aburizalpurnama/travel/internal/app/database"
+	"github.com/aburizalpurnama/travel/internal/app/domain/product"
 	"github.com/aburizalpurnama/travel/internal/app/domain/user"
 	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
@@ -46,11 +47,17 @@ func main() {
 
 func injectDependencies(db *gorm.DB) *router.Option {
 	userRepository := user.NewUserRepository(db)
+	productRepository := product.NewProductRepository(db)
+
 	userService := user.NewUserService(userRepository)
+	productService := product.NewProductService(productRepository)
+
 	userHandler := user.NewUserHandler(userService)
+	productHandler := product.NewProductHandler(productService)
 
 	return &router.Option{
-		UserHandler: userHandler,
+		UserHandler:    userHandler,
+		ProductHandler: productHandler,
 	}
 }
 

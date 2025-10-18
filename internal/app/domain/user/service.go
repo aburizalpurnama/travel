@@ -21,7 +21,7 @@ func NewUserService(repo contract.UserRepository) contract.UserService {
 	return &userService{repo: repo}
 }
 
-func (s *userService) CreateUser(ctx context.Context, req payload.UserCreateRequest) (*model.User, error) {
+func (s *userService) CreateUser(ctx context.Context, req payload.UserCreateRequest) (*payload.UserResponse, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,18 @@ func (s *userService) CreateUser(ctx context.Context, req payload.UserCreateRequ
 		Role:         req.Role,
 	}
 
-	return s.repo.Save(ctx, user)
+	created, err := s.repo.Save(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &payload.UserResponse{}
+	err = copier.Copy(res, created)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s *userService) GetAllUsers(ctx context.Context, req payload.UserGetAllRequest) ([]payload.UserResponse, *response.Pagination, error) {
@@ -80,11 +91,22 @@ func (s *userService) GetAllUsers(ctx context.Context, req payload.UserGetAllReq
 	return resp, &pagination, nil
 }
 
-func (s *userService) GetUserByID(ctx context.Context, id uint) (*model.User, error) {
-	return s.repo.FindByID(ctx, id)
+func (s *userService) GetUserByID(ctx context.Context, id uint) (*payload.UserResponse, error) {
+	user, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &payload.UserResponse{}
+	err = copier.Copy(res, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
-func (s *userService) UpdateUser(ctx context.Context, id uint, req payload.UserUpdateRequest) (*model.User, error) {
+func (s *userService) UpdateUser(ctx context.Context, id uint, req payload.UserUpdateRequest) (*payload.UserResponse, error) {
 	user, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -102,7 +124,18 @@ func (s *userService) UpdateUser(ctx context.Context, id uint, req payload.UserU
 		user.Phone = *req.Phone
 	}
 
-	return s.repo.Update(ctx, user)
+	updated, err := s.repo.Update(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &payload.UserResponse{}
+	err = copier.Copy(res, updated)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s *userService) DeleteUser(ctx context.Context, id uint) error {

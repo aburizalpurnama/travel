@@ -1,5 +1,7 @@
 package response
 
+import "math"
+
 type APIResponse struct {
 	Status     string      `json:"status"`
 	Data       any         `json:"data,omitempty"`
@@ -18,6 +20,24 @@ type Pagination struct {
 	TotalPages  *int   `json:"total_pages,omitempty"`
 	CurrentPage *int   `json:"current_page,omitempty"`
 	PageSize    *int   `json:"page_size,omitempty"`
+}
+
+func NewPagination(page, size *int, count *int64) *Pagination {
+	if page == nil || size == nil || count == nil {
+		return nil
+	}
+
+	if *size <= 0 || *count <= 0 {
+		return nil
+	}
+
+	totalPages := int(math.Ceil(float64(*count) / float64(*size)))
+	return &Pagination{
+		CurrentPage: page,
+		PageSize:    size,
+		TotalItems:  count,
+		TotalPages:  &totalPages,
+	}
 }
 
 func Success(data any, pagination *Pagination) APIResponse {
@@ -42,7 +62,7 @@ func ValidationError(details any) APIResponse {
 	return APIResponse{
 		Status: "error",
 		Error: &APIError{
-			Code:    "VALIDAanyION_ERROR",
+			Code:    "VALIDATION_ERROR",
 			Message: "Your request is invalid. Please check the details.",
 			Details: details,
 		},

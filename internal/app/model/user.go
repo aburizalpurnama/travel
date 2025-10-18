@@ -33,9 +33,7 @@ func (User) TableName() string {
 }
 
 type UserFilter struct {
-	ID         *uint   `query:"id"`
 	UID        *string `query:"uid"`
-	Email      *string `query:"email"`
 	IsActive   *bool   `query:"is_active"`
 	IsVerified *bool   `query:"is_verified"`
 	Role       *string `query:"role"`
