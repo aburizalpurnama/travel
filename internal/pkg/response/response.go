@@ -77,7 +77,7 @@ func JSONParserError(err error) APIResponse {
 			Error: &APIError{
 				Code:    apperror.Validation,
 				Message: "Your request is invalid. Please check the details.",
-				Details: map[string]any{unmarshalErr.Field: apperror.IsInvalid},
+				Details: map[string]any{unmarshalErr.Field: apperror.InvalidFormat},
 			},
 		}
 	}
@@ -114,8 +114,19 @@ func ValidationError(err error) APIResponse {
 				formattedErrors[field] = apperror.IsRequired
 			case "email", "url", "uuid":
 				formattedErrors[field] = apperror.InvalidFormat
-			case "gt", "min", "max", "length":
-				formattedErrors[field] = apperror.InvalidValue
+			case "gt", "gte":
+				formattedErrors[field] = apperror.ValueTooLow
+			case "lt", "lte":
+				formattedErrors[field] = apperror.ValueTooHigh
+			case "min":
+				formattedErrors[field] = apperror.LengthTooShort
+			case "max":
+				formattedErrors[field] = apperror.LengthTooLong
+			case "length":
+				formattedErrors[field] = apperror.InvalidLength
+			case "oneof":
+				formattedErrors[field] = apperror.InvalidChoice
+
 			default:
 				formattedErrors[field] = apperror.InvalidValue
 			}

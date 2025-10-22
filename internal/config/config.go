@@ -8,27 +8,27 @@ import (
 )
 
 type Config struct {
-	AppEnv      string `env:"APP_ENV" envDefault:"development"`
-	AppName     string `env:"APP_NAME" envDefault:"TravelQu API"` // TODO: default value ganti dengan nama app pada builder
+	AppEnv      string `env:"APP_ENV"       envDefault:"development"`
+	AppName     string `env:"APP_NAME"      envDefault:"TravelQu API"` // TODO: default value ganti dengan nama app pada builder
 	AppLogLevel string `env:"APP_LOG_LEVEL"`
-	ServerPort  int    `env:"SERVER_PORT" envDefault:"3000"`
+	ServerPort  int    `env:"SERVER_PORT"   envDefault:"3000"`
 
 	DBHost            string        `env:"DB_HOST,required"`
 	DBPort            int           `env:"DB_PORT,required"`
 	DBUsername        string        `env:"DB_USERNAME,required"`
 	DBPassword        string        `env:"DB_PASSWORD,required"`
 	DBName            string        `env:"DB_NAME,required"`
-	DBSSLMode         string        `env:"DB_SSLMODE" envDefault:"disable"`
-	DBTimezone        string        `env:"DB_TIMEZONE" envDefault:"Asia/Jakarta"`
-	DBMaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS" envDefault:"10"`
-	DBMaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS" envDefault:"100"`
+	DBSSLMode         string        `env:"DB_SSLMODE"           envDefault:"disable"`
+	DBTimezone        string        `env:"DB_TIMEZONE"          envDefault:"Asia/Jakarta"`
+	DBMaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS"    envDefault:"10"`
+	DBMaxOpenConns    int           `env:"DB_MAX_OPEN_CONNS"    envDefault:"100"`
 	DBConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"1h"`
 	DBLogLevel        string        `env:"DB_LOG_LEVEL"`
 
 	RedisHost     string `env:"REDIS_HOST"`
 	RedisPort     int    `env:"REDIS_PORT"`
 	RedisPassword string `env:"REDIS_PASSWORD"`
-	RedisDB       int    `env:"REDIS_DB" envDefault:"0"`
+	RedisDB       int    `env:"REDIS_DB"       envDefault:"0"`
 
 	JwtSecret            string `env:"JWT_SECRET"`
 	JwtExpirationMinutes int    `env:"JWT_EXPIRATION_MINUTES" envDefault:"60"`

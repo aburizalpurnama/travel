@@ -142,7 +142,7 @@ func (h *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
 
 	var req payload.ProductUpdateRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
+		return c.Status(fiber.StatusBadRequest).JSON(response.JSONParserError(err))
 	}
 
 	validate := validator.New()
