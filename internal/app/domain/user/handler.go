@@ -1,10 +1,12 @@
 package user
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
 	"github.com/aburizalpurnama/travel/internal/app/payload"
+	"github.com/aburizalpurnama/travel/internal/pkg/apperror"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -33,7 +35,27 @@ func (h *UserHandler) CreateUser(c *fiber.Ctx) error {
 	user, err := h.service.CreateUser(c.Context(), req)
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
+
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			switch appErr.Code {
+			case apperror.DuplicateEntry:
+				return c.Status(fiber.StatusConflict).JSON(
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
+				)
+
+				// handle other error codes as needed
+
+			default:
+				return c.Status(fiber.StatusInternalServerError).JSON(
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
+				)
+			}
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.Success(user, nil))
@@ -50,7 +72,10 @@ func (h *UserHandler) GetUsers(c *fiber.Ctx) error {
 	users, pagination, err := h.service.GetAllUsers(c.Context(), req)
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
+
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.JSON(response.Success(users, pagination))
@@ -65,7 +90,9 @@ func (h *UserHandler) GetUser(c *fiber.Ctx) error {
 	user, err := h.service.GetUserByID(c.Context(), uint(id))
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusNotFound).JSON(response.Error("internal", err.Error()))
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 	return c.JSON(user)
 }

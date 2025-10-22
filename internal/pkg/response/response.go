@@ -6,10 +6,8 @@ import (
 	"math"
 
 	"github.com/aburizalpurnama/travel/internal/pkg/apperror"
-	"github.com/aburizalpurnama/travel/internal/pkg/dberror"
 	appstrings "github.com/aburizalpurnama/travel/internal/pkg/strings"
 	"github.com/go-playground/validator/v10"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type APIResponse struct {
@@ -58,47 +56,22 @@ func Success(data any, pagination *Pagination) APIResponse {
 	}
 }
 
-func Error(code apperror.Code, message string) APIResponse {
+func Error(code apperror.Code, message string, details any) APIResponse {
 	return APIResponse{
 		Status: "error",
 		Error: &APIError{
 			Code:    code,
 			Message: message,
+			Details: details,
 		},
 	}
 }
-
-// func ValidationError(details any) APIResponse {
-// 	return APIResponse{
-// 		Status: "error",
-// 		Error: &APIError{
-// 			Code:    apperror.Validation,
-// 			Message: "Your request is invalid. Please check the details.",
-// 			Details: details,
-// 		},
-// 	}
-// }
 
 func JSONParserError(err error) APIResponse {
 	var unmarshalErr *json.UnmarshalTypeError
 	var syntaxErr *json.SyntaxError
 
 	if errors.As(err, &unmarshalErr) {
-		// expectedType := unmarshalErr.Type.String()
-
-		// switch true {
-		// case strings.Contains(expectedType, "float"), strings.Contains(expectedType, "int"):
-		// 	expectedType = "number"
-		// case strings.Contains(expectedType, "bool"):
-		// 	expectedType = "boolean"
-		// case strings.Contains(expectedType, "string"):
-		// 	expectedType = "string"
-		// default:
-		// 	expectedType = "a valid value"
-		// }
-
-		// unmarchalErr.Value
-
 		return APIResponse{
 			Status: "error",
 			Error: &APIError{
@@ -163,43 +136,6 @@ func ValidationError(err error) APIResponse {
 		Error: &APIError{
 			Code:    apperror.Validation,
 			Message: "Your request is invalid",
-		},
-	}
-}
-
-func PostgreError(pgErr *pgconn.PgError) APIResponse {
-	// if pgErr.Code == "23505" {
-
-	// 			// TODO: define semua based on unique constraints
-	// 			// (Opsional tapi sangat baik) Cek nama constraint-nya
-	// 			switch pgErr.ConstraintName {
-	// 			case "products_name_unique":
-	// 				return nil, apperror.New(apperror.ProductNameExists, "product name already exists", err)
-	// 			case "ux_products_uid_active":
-	// 				return nil, apperror.New(apperror.DuplicateEntry, "product UID already exists", err)
-	// 			default:
-	// 				return nil, apperror.New(apperror.DuplicateEntry, "unique constraint violated", err)
-	// 			}
-	// 		}
-
-	// GetSQLState
-
-	if dberror.SQLState(pgErr.Code) == dberror.UniqueViolation {
-		return APIResponse{
-			Status: "error",
-			Error: &APIError{
-				Code: apperror.DuplicateEntry,
-				/ dapetin error message dari pgErr.Detail
-				Message: "Duplicate entry violates unique constraint",
-			},
-		}
-	}
-
-	return APIResponse{
-		Status: "error",
-		Error: &APIError{
-			Code:    apperror.Internal,
-			Message: apperror.ERR_INTERNAL_MSG,
 		},
 	}
 }

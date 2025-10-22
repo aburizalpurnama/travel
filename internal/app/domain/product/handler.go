@@ -39,21 +39,23 @@ func (h *ProductHandler) CreateProduct(c *fiber.Ctx) error {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
 			switch appErr.Code {
-			// TODO: define semua based on unique constraints
-			case apperror.ProductNameExists, apperror.DuplicateEntry:
+			case apperror.DuplicateEntry:
 				return c.Status(fiber.StatusConflict).JSON(
-					response.Error(appErr.Code, appErr.Message),
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
 
 				// handle other error codes as needed
+
 			default:
 				return c.Status(fiber.StatusInternalServerError).JSON(
-					response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG),
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
 			}
 		}
 
-		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.Success(product, nil))
@@ -70,7 +72,27 @@ func (h *ProductHandler) GetProducts(c *fiber.Ctx) error {
 	products, pagination, err := h.service.GetAllProducts(c.Context(), req)
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusInternalServerError).JSON(response.Error("internal", err.Error()))
+
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			switch appErr.Code {
+			case apperror.NotFound:
+				return c.Status(fiber.StatusConflict).JSON(
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
+				)
+
+				// handle other error codes as needed
+
+			default:
+				return c.Status(fiber.StatusInternalServerError).JSON(
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
+				)
+			}
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.JSON(response.Success(products, pagination))
@@ -80,7 +102,7 @@ func (h *ProductHandler) GetProduct(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(
-			response.Error(apperror.Validation, "invalid id"),
+			response.Error(apperror.Validation, "invalid id", nil),
 		)
 	}
 
@@ -93,19 +115,19 @@ func (h *ProductHandler) GetProduct(c *fiber.Ctx) error {
 			switch appErr.Code {
 			case apperror.ProductNotFound:
 				return c.Status(fiber.StatusNotFound).JSON(
-					response.Error(appErr.Code, appErr.Message),
+					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
 
 				// handle other error codes as needed
 			default:
 				return c.Status(fiber.StatusInternalServerError).JSON(
-					response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG),
+					response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
 				)
 			}
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(
-			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG),
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
 		)
 	}
 
@@ -131,7 +153,10 @@ func (h *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
 	product, err := h.service.UpdateProduct(c.Context(), uint(id), req)
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusNotFound).JSON(response.Error("internal", err.Error()))
+
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.JSON(response.Success(product, nil))
@@ -146,7 +171,10 @@ func (h *ProductHandler) DeleteProduct(c *fiber.Ctx) error {
 	err = h.service.DeleteProduct(c.Context(), uint(id))
 	if err != nil {
 		c.Locals("error", err)
-		return c.Status(fiber.StatusNotFound).JSON(response.Error("internal", err.Error()))
+
+		return c.Status(fiber.StatusInternalServerError).JSON(
+			response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
+		)
 	}
 
 	return c.JSON(response.Success("success delete data", nil))

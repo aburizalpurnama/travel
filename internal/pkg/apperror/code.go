@@ -16,15 +16,10 @@ const (
 // DOMAIN ERRORS
 const (
 	// User
-	UserNotFound    Code = "ERR_USER_NOT_FOUND"
-	UserEmailExists Code = "ERR_USER_EMAIL_EXISTS"
-	UserPhoneExists Code = "ERR_USER_PHONE_EXISTS"
+	UserNotFound Code = "ERR_USER_NOT_FOUND"
 
 	// Product
 	ProductNotFound Code = "ERR_PRODUCT_NOT_FOUND"
-
-	// TODO: define semua based on unique constraints
-	ProductNameExists Code = "ERR_PRODUCT_NAME_EXISTS"
 
 	// Finance
 	InsufficientFunds Code = "ERR_INSUFFICIENT_FUNDS"
