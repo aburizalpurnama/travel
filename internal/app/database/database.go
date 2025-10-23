@@ -1,6 +1,7 @@
 package database
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/aburizalpurnama/travel/internal/config"
@@ -9,7 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
+func NewGorm(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
 		cfg.DBHost,
 		cfg.DBUsername,
@@ -34,6 +35,26 @@ func InitDatabase(cfg *config.Config) (*gorm.DB, error) {
 
 	// GORM AutoMigrate hanya untuk development cepat.
 	// Di produksi, sebaiknya gunakan tool migrasi terpisah (seperti GORM Migrate atau Goose).
+
+	fmt.Println("Database connection successful")
+	return db, nil
+}
+
+func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
+		cfg.DBHost,
+		cfg.DBUsername,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBPort,
+		cfg.DBSSLMode,
+		cfg.DBTimezone,
+	)
+
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
 
 	fmt.Println("Database connection successful")
 	return db, nil

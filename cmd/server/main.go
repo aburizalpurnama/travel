@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("Error loading .env file: %v", err)
 	}
 
-	db, err := database.InitDatabase(cfg)
+	db, err := database.NewGorm(cfg)
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
