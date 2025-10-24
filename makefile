@@ -1,35 +1,95 @@
 .PHONY: all build run run-hot test test-cover lint tidy clean docker-build help install-tools migration-create migration-up migration-down migration-status
+
 .DEFAULT_GOAL := help
 
 # --- Variables ---
-BINARY_NAME := server
+BINARY_NAME := main
+TMP_DIR := ./tmp
 SERVER_CMD_PATH := ./cmd/server
 MIGRATION_CMD_PATH := ./cmd/migration
 MIGRATION_DIR := ./internal/app/database/migration
+
+# Tools version
+GOOSE_VERSION := latest
+AIR_VERSION := latest
+GOLANGCI_VERSION := v2.5.0
+
+# Default binary name untuk Linux/macOS
+BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME)
+
+# Mendeteksi OS Windows (MINGW atau CYGWIN) dan menambahkan .exe
+ifeq ($(findstring MINGW,$(shell uname -s)),MINGW)
+    BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME).exe
+endif
+ifeq ($(findstring CYGWIN,$(shell uname -s)),CYGWIN)
+    BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME).exe
+endif
+
+# Get GOBIN or GOHOME/bin as instalation path
+GOBIN ?= $(shell go env GOBIN)
+ifeq ($(GOBIN),)
+GOBIN = $(shell go env GOPATH)/bin
+endif
 
 # --- Application ---
 build: ## Build the production binary
 	@echo "Building binary..."
 	@mkdir -p build
-	@go build -o build/$(BINARY_NAME) $(SERVER_CMD_PATH)/main.go
+	@go build -o build/$(BINARY_NAME) $(SERVER_CMD_PATH)/.
 
 run: ## Run the application
-	@go run $(SERVER_CMD_PATH)/main.go
+	@go run $(SERVER_CMD_PATH)/.
 
 run-hot: ## Run the application with hot-reload (requires 'air')
 	@echo "Running with hot-reload (requires 'air' to be installed)..."
-	@air -build.cmd "go build -o ./tmp/main.exe $(SERVER_CMD_PATH)/."
+	@mkdir -p $(TMP_DIR)
+	@air -build.cmd "go build -o $(BINARY_FILE) $(SERVER_CMD_PATH)/." -build.bin "$(BINARY_FILE)"
 
 # --- Dependencies & Tools ---
 tidy: ## Tidy go.mod and go.sum
 	@echo "Tidying go.mod..."
 	@go mod tidy
 
+# --- Tools Installation ---
 install-tools: ## Install required Go development tools (goose, air, golangci-lint)
-	@echo "Installing development tools..."
-	@go install github.com/pressly/goose/v3/cmd/goose@latest
-	@go install github.com/air-verse/air@latest
-	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.5.0
+	@echo "Installing development tools to $(GOBIN)..."
+
+	@# Install goose (masih aman via go install)
+	@if ! command -v goose &> /dev/null; then \
+		echo "Installing goose..."; \
+		go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION); \
+	else \
+		echo "goose is already installed."; \
+	fi
+
+	@# Install air (masih aman via go install)
+	@if ! command -v air &> /dev/null; then \
+		echo "Installing air..."; \
+		go install github.com/air-verse/air@$(AIR_VERSION); \
+	else \
+		echo "air is already installed."; \
+	fi
+
+	@# Install golangci-lint (menggunakan metode biner)
+	@if ! command -v golangci-lint &> /dev/null; then \
+		echo "Installing golangci-lint..."; \
+		case "$$(uname -s)" in \
+			Darwin) \
+				echo "Using 'brew' for macOS..."; \
+				brew install golangci-lint; \
+				;; \
+			Linux | MINGW*) \
+				echo "Using 'curl' script for Linux/Windows (MINGW)..."; \
+				curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_VERSION); \
+				;; \
+			*) \
+				echo "Unsupported OS: $$(uname -s) for binary install. Attempting 'go install' as fallback..."; \
+				go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_VERSION); \
+				;; \
+		esac; \
+	else \
+		echo "golangci-lint is already installed."; \
+	fi
 
 # --- Quality & Testing ---
 test: ## Run all unit tests for internal packages
