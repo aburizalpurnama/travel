@@ -27,7 +27,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
-	defer db.Close()
+
+	defer func() {
+		err = db.Close()
+		if err != nil {
+			log.Fatalf("Failed to close database connection: %s", err.Error())
+		}
+	}()
 
 	// Ambil argumen (up, down, status)
 	if len(os.Args) < 2 {
