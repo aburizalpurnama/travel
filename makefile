@@ -141,6 +141,7 @@ clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
 	@rm -rf build
 	@rm -f coverage.out
+	@rm -rf tmp
 
 help: ## Show this help message
 	@echo "Available commands:"
