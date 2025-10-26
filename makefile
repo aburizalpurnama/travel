@@ -3,6 +3,10 @@
 .DEFAULT_GOAL := help
 
 # --- Variables ---
+APP_IMAGE_NAME := travel-api-server
+MIGRATOR_IMAGE_NAME := travel-api-migrator
+TAG := latest
+
 BINARY_NAME := main
 TMP_DIR := ./tmp
 SERVER_CMD_PATH := ./cmd/server
@@ -136,6 +140,16 @@ migration-fix: ## Apply sequential ordering to migrations
 docker-build: build ## Build the production Docker image
 	@echo "Building Docker image..."
 	@docker build -t $(BINARY_NAME):latest .
+
+docker-build-server:
+	@echo "Building server image..."
+	@docker build --target server -t $(APP_IMAGE_NAME):$(TAG) .
+
+docker-build-migrator:
+	@echo "Building migrator image..."
+	@docker build --target migrator -t $(MIGRATOR_IMAGE_NAME):$(TAG) .
+
+docker-build-all: docker-build-server docker-build-migrator
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
