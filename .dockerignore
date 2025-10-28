@@ -1,0 +1,13 @@
+# Abaikan file .git dan dependensi lokal
+.git
+.gitignore
+vendor/
+node_modules/
+
+# Abaikan output build lokal
+build/
+tmp/
+
+# Abaikan file konfigurasi lokal
+.env
+*.md
