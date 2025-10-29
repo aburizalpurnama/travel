@@ -1,4 +1,4 @@
-.PHONY: all build run run-hot test test-cover lint tidy clean docker-build help install-tools migration-create migration-up migration-down migration-status
+.PHONY: all build run run-hot test test-cover lint tidy clean docker-build docker-build-server docker-build-migrator docker-build-all podman-build podman-build-server podman-build-migrator podman-build-all help install-tools migration-create migration-up migration-down migration-status
 
 .DEFAULT_GOAL := help
 
@@ -136,9 +136,9 @@ migration-fix: ## Apply sequential ordering to migrations
 	@echo "Apply sequential ordering to migrations..."
 	@go run $(MIGRATION_CMD_PATH)/. fix
 
-# --- Docker & Clean ---
-docker-build: build ## Build the production Docker image
-	@echo "Building Docker image..."
+# --- Docker ---
+docker-build: build ## Build the production Container image
+	@echo "Building Container image..."
 	@docker build -t $(BINARY_NAME):latest .
 
 docker-build-server:
@@ -150,6 +150,21 @@ docker-build-migrator:
 	@docker build --target migrator -t $(MIGRATOR_IMAGE_NAME):$(TAG) .
 
 docker-build-all: docker-build-server docker-build-migrator
+
+# --- Podman ---
+podman-build: build ## Build the production container image
+	@echo "Building container image..."
+	@podman build -t $(BINARY_NAME):latest .
+
+podman-build-server:
+	@echo "Building server image..."
+	podman build --target server -t $(APP_IMAGE_NAME):$(TAG) .
+
+podman-build-migrator:
+	@echo "Building migrator image..."
+	@podman build --target migrator -t $(MIGRATOR_IMAGE_NAME):$(TAG) .
+
+podman-build-all: podman-build-server podman-build-migrator
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
