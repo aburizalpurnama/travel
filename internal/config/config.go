@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -41,13 +42,17 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
+	appEnv := os.Getenv("APP_ENV")
+
+	if appEnv == "development" || appEnv == "" {
+		err := godotenv.Load()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cfg := &Config{}
-	err = env.Parse(cfg)
+	err := env.Parse(cfg)
 	if err != nil {
 		return nil, err
 	}
