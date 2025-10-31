@@ -41,7 +41,7 @@ func main() {
 	}
 
 	command := os.Args[1]
-	migrationDir := "" // it will use .go migration file in memory instead of filesystem
+	migrationDir := "." // it will use .go migration file in memory instead of filesystem
 	// migrationDir := "internal/app/database/migration"
 
 	// Jalankan perintah goose
