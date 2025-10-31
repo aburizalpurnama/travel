@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"time"
 
@@ -46,8 +47,10 @@ func LoadConfig() (*Config, error) {
 
 	if appEnv == "development" || appEnv == "" {
 		err := godotenv.Load()
-		if err != nil {
-			return nil, err
+		if err != nil && !os.IsNotExist(err) {
+			// Beri peringatan jika ada error lain (misal: format .env salah),
+			// tapi abaikan jika error-nya hanya "file tidak ditemukan".
+			log.Printf("Warning: Non-critical error loading .env file: %v", err)
 		}
 	}
 

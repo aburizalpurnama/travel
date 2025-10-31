@@ -28,6 +28,8 @@ CMD ["./server"]
 FROM alpine:latest AS migrator
 WORKDIR /app
 
+# COPY --from=builder /app/internal/app/database/migration internal/app/database/migration
+
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=builder /app/build/migrator .

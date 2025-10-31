@@ -1,0 +1,98 @@
+version: "3.9"
+
+# 'x-anchor' adalah fitur YAML yang memungkinkan kita mendefinisikan
+# sebuah blok sekali dan menggunakannya kembali (Prinsip DRY).
+# Ini BUKAN bagian dari Docker Compose, ini adalah sintaks YAML murni.
+x-common-db-env: &common-db-env
+  # Variabel ini sekarang diambil dari file .env
+  APP_ENV: ${APP_ENV}
+  APP_NAME: "Travel API"
+  SERVER_PORT: ${API_INTERNAL_PORT} # Port internal container
+  DB_HOST: postgres               # Nama service (sesuai best practice)
+  DB_PORT: 5432                   # Port internal postgres
+  DB_USERNAME: ${POSTGRES_USER}
+  DB_PASSWORD: ${POSTGRES_PASSWORD}
+  DB_NAME: ${POSTGRES_DB}
+  DB_SSLMODE: disable
+  DB_TIMEZONE: Asia/Jakarta
+  DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-10}   # Mengambil dari .env, atau default ke 10
+  DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-50}   # Mengambil dari .env, atau default ke 50
+  DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-1h} # Mengambil dari .env, atau default ke 1h
+  DB_LOG_LEVEL: ${DB_LOG_LEVEL}
+
+services:
+  postgres:
+    # Best Practice: Gunakan image yang spesifik dan kecil, misal -alpine
+    image: docker.io/library/postgres:15-alpine
+    container_name: postgres
+    restart: always
+    environment:
+      # Best Practice: Ambil variabel dari file .env
+      # Ini membuat file compose Anda aman untuk di-commit.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+    ports:
+      # Ambil port dari .env agar mudah diubah
+      - "${POSTGRES_HOST_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Best Practice: Tambahkan start_period agar database
+      # punya waktu untuk inisialisasi (initdb) saat pertama kali dijalankan.
+      start_period: 30s
+    networks:
+      - travel_local_network
+
+  travel-migrator:
+    image: localhost/travel-api-migrator
+    container_name: travel-migrator
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    restart: never
+    environment:
+      # Best Practice: Gunakan 'alias' (&common-db-env) untuk me-reuse
+      # blok environment di atas. Tidak ada lagi duplikasi.
+      <<: *common-db-env
+    networks:
+      - travel_local_network
+    depends_on:
+      postgres:
+        condition: service_healthy # Sintaks ini sudah benar
+        required: true
+        restart: false
+    command: ["up"]
+
+  travel-api:
+    image: localhost/travel-api-server
+    container_name: travel-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: server
+    restart: always
+    environment:
+      # Best Practice: Gunakan 'alias' yang sama di sini.
+      <<: *common-db-env
+    depends_on:
+      travel-migrator:
+        condition: service_completed_successfully # Sintaks ini sudah benar
+        required: true
+        restart: false
+    ports:
+      # Ambil port dari .env
+      - "${API_HOST_PORT}:${API_INTERNAL_PORT}"
+    networks:
+      - travel_local_network
+
+volumes:
+  postgres-volume:
+
+networks:
+  travel_local_network:

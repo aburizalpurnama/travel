@@ -41,7 +41,8 @@ func main() {
 	}
 
 	command := os.Args[1]
-	migrationDir := "internal/app/database/migration"
+	migrationDir := "" // it will use .go migration file in memory instead of filesystem
+	// migrationDir := "internal/app/database/migration"
 
 	// Jalankan perintah goose
 	if err := goose.RunContext(context.Background(), command, db, migrationDir); err != nil {
