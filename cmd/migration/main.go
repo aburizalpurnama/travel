@@ -8,10 +8,8 @@ import (
 
 	"github.com/pressly/goose/v3"
 
-	// Impor driver postgres
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	// Impor file .go migrasi Anda
 	"github.com/aburizalpurnama/travel/internal/app/database"
 	_ "github.com/aburizalpurnama/travel/internal/app/database/migration"
 	"github.com/aburizalpurnama/travel/internal/config"
@@ -35,16 +33,13 @@ func main() {
 		}
 	}()
 
-	// Ambil argumen (up, down, status)
 	if len(os.Args) < 2 {
 		log.Fatalf("Missing command: 'up', 'down', or 'status'")
 	}
 
 	command := os.Args[1]
 	migrationDir := "." // it will use .go migration file in memory instead of filesystem
-	// migrationDir := "internal/app/database/migration"
 
-	// Jalankan perintah goose
 	if err := goose.RunContext(context.Background(), command, db, migrationDir); err != nil {
 		log.Fatalf("Goose run failed for command '%s': %v", command, err)
 	}
