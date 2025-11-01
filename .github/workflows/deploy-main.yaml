@@ -121,4 +121,4 @@ jobs:
 
       # 8. Cetak URL aplikasi yang live
       - name: Show Live URL
-        run: echo "🚀 API Live at: ${{ steps.deploy.outputs.url }}"
+        run: echo "🚀 API Live at ${{ steps.deploy.outputs.url }}"
