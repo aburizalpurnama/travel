@@ -11,7 +11,7 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   ARTIFACT_REGISTRY: ${{ secrets.GCP_ARTIFACT_REGISTRY }}
   SERVICE_NAME: travel-api      # Nama Cloud Run Service
-  SERVER_PORT: 4000
+  SERVER_PORT: 3000
   MIGRATOR_NAME: travel-migrator # Nama Cloud Run Job
   REGION: asia-southeast2
 
