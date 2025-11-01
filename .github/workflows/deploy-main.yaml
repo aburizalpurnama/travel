@@ -24,6 +24,9 @@ jobs:
       id-token: 'write' # Dibutuhkan untuk otentikasi Workload Identity
       pull-requests: 'read'
 
+    outputs:
+      migration_files_changed: ${{ steps.check_migration_files.outputs.any_changed }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -80,6 +83,7 @@ jobs:
 
     steps:
       - id: 'auth'
+        if: needs.build-and-push.outputs.migration_files_changed == 'true'
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
@@ -88,7 +92,7 @@ jobs:
       # 5. Deploy Cloud Run Job (Migrator)
       # Perintah ini akan "memperbarui" job jika sudah ada, atau membuatnya jika belum
       - name: Deploy and Run Migrator Job
-        if: steps.check_migration_files.outputs.any_changed == 'true'
+        if: needs.build-and-push.outputs.migration_files_changed == 'true'
         run: |
           gcloud run jobs deploy ${{ env.MIGRATOR_NAME }} \
             --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}:latest \
@@ -101,11 +105,11 @@ jobs:
 
       # 6. Jalankan Job dan tunggu sampai selesai
       - name: Execute Migrator Job
-        if: steps.check_migration_files.outputs.any_changed == 'true'
+        if: needs.build-and-push.outputs.migration_files_changed == 'true'
         run: gcloud run jobs execute ${{ env.MIGRATOR_NAME }} --region ${{ env.REGION }} --wait
 
       - name: Log Skip
-        if: steps.check_files.outputs.any_changed != 'true'
+        if: needs.build-and-push.outputs.migration_files_changed != 'true'
         run: echo "No changes found in 'internal/app/database/migration'. Skipping database migration."
 
   deploy-api-service:
