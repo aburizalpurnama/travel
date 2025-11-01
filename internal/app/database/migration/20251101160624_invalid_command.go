@@ -13,7 +13,7 @@ func init() {
 
 func upInvalidCommand(ctx context.Context, tx *sql.Tx) error {
 	// This code is executed when the migration is applied.
-	_, err := tx.ExecContext(ctx, "ALTER core.products ADD IF NOT EXIST notes VARCHAR(100) NULL;")
+	_, err := tx.ExecContext(ctx, "ALTER TABLE core.products ADD IF NOT EXIST notes VARCHAR(100) NULL;")
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func upInvalidCommand(ctx context.Context, tx *sql.Tx) error {
 
 func downInvalidCommand(ctx context.Context, tx *sql.Tx) error {
 	// This code is executed when the migration is rolled back.
-	_, err := tx.ExecContext(ctx, "ALTER core.products DROP IF EXIST notes;")
+	_, err := tx.ExecContext(ctx, "ALTER TABLE core.products DROP IF EXIST notes;")
 	if err != nil {
 		return err
 	}
