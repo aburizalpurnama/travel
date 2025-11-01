@@ -81,7 +81,7 @@ jobs:
             --region ${{ env.REGION }} \
             --task-timeout 5m \
             --service-account travel-api-runtime-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_USER=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
+            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_PORT=5432,DB_USERNAME=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
             --set-secrets=DB_PASSWORD=PROD_DB_PASSWORD:latest
 
       # 6. Jalankan Job dan tunggu sampai selesai
@@ -116,7 +116,7 @@ jobs:
             --min-instances 0 \
             --max-instances 2 \
             --service-account travel-api-runtime-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
-            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_USER=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
+            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_PORT=5432,DB_USERNAME=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
             --set-secrets=DB_PASSWORD=PROD_DB_PASSWORD:latest,JWT_SECRET=PROD_JWT_SECRET:latest
 
       # 8. Cetak URL aplikasi yang live
