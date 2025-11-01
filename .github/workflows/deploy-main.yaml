@@ -83,6 +83,7 @@ jobs:
             --service-account travel-api-runtime-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
             --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_PORT=5432,DB_USERNAME=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
             --set-secrets=DB_PASSWORD=PROD_DB_PASSWORD:latest
+            --args="up"
 
       # 6. Jalankan Job dan tunggu sampai selesai
       - name: Execute Migrator Job
