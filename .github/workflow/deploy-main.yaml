@@ -1,0 +1,124 @@
+name: Deploy to Cloud Run
+
+# Hanya berjalan saat push ke branch 'main'
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  # Definisikan variabel untuk pipeline
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  ARTIFACT_REGISTRY: ${{ secrets.GCP_ARTIFACT_REGISTRY }}
+  SERVICE_NAME: travel-api      # Nama Cloud Run Service
+  MIGRATOR_NAME: travel-migrator # Nama Cloud Run Job
+  REGION: asia-southeast2
+
+jobs:
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Dibutuhkan untuk otentikasi Workload Identity
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Otentikasi ke GCP menggunakan WIF (Workload Identity)
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      # 2. Otentikasi Docker ke Artifact Registry
+      - name: 'Docker Auth'
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      # 3. Build & Push Migrator Image
+      - name: Build and Push Migrator
+        run: |
+          docker build -f Dockerfile \
+            --target migrator \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}:${{ github.sha }} \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}:latest \
+            .
+          docker push --all-tags ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}
+
+      # 4. Build & Push Server Image
+      - name: Build and Push Server
+        run: |
+          docker build -f Dockerfile \
+            --target server \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            -t ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:latest \
+            .
+          docker push --all-tags ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}
+
+  deploy-migrator-job:
+    name: Deploy Database Migrator Job
+    needs: build-and-push # Bergantung pada job build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      # 5. Deploy Cloud Run Job (Migrator)
+      # Perintah ini akan "memperbarui" job jika sudah ada, atau membuatnya jika belum
+      - name: Deploy and Run Migrator Job
+        run: |
+          gcloud run jobs deploy ${{ env.MIGRATOR_NAME }} \
+            --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}:latest \
+            --region ${{ env.REGION }} \
+            --task-timeout 5m \
+            --service-account travel-api-runtime-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_USER=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
+            --set-secrets=DB_PASSWORD=PROD_DB_PASSWORD:latest
+
+      # 6. Jalankan Job dan tunggu sampai selesai
+      - name: Execute Migrator Job
+        run: gcloud run jobs execute ${{ env.MIGRATOR_NAME }} --region ${{ env.REGION }} --wait
+
+  deploy-api-service:
+    name: Deploy API Service
+    needs: deploy-migrator-job # Bergantung pada job migrasi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      # 7. Deploy Cloud Run Service (API)
+      - name: Deploy API Service
+        id: deploy
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.SERVICE_NAME }}:latest \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 4000 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --service-account travel-api-runtime-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --set-env-vars=APP_ENV=production,DB_SSLMODE=verify-full,DB_HOST=${{ secrets.NEON_HOST }},DB_USER=${{ secrets.NEON_USER }},DB_NAME=${{ secrets.NEON_DB_NAME }} \
+            --set-secrets=DB_PASSWORD=PROD_DB_PASSWORD:latest,JWT_SECRET=PROD_JWT_SECRET:latest
+
+      # 8. Cetak URL aplikasi yang live
+      - name: Show Live URL
+        run: echo "🚀 API Live at: ${{ steps.deploy.outputs.url }}"
