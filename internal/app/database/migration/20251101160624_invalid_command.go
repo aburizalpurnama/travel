@@ -13,7 +13,7 @@ func init() {
 
 func upInvalidCommand(ctx context.Context, tx *sql.Tx) error {
 	// This code is executed when the migration is applied.
-	_, err := tx.ExecContext(ctx, "ALTER core.invalid_table ADD IF NOT EXIST invalid varchar(10) NULLi;")
+	_, err := tx.ExecContext(ctx, "ALTER core.invalid_table ADD IF NOT EXIST invalid varchar(10) NULLii;")
 	if err != nil {
 		return err
 	}

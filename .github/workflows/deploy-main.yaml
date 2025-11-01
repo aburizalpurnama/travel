@@ -36,6 +36,8 @@ jobs:
         with:
           # Tentukan path ke folder migrasi Anda
           files: internal/app/database/migration/**
+          base_sha: ${{ github.event.before }}
+          sha: ${{ github.sha }}
 
       # 1. Otentikasi ke GCP menggunakan WIF (Workload Identity)
       - id: 'auth'
