@@ -22,10 +22,20 @@ jobs:
     permissions:
       contents: 'read'
       id-token: 'write' # Dibutuhkan untuk otentikasi Workload Identity
+      pull-requests: 'read'
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for migration file changes
+        id: check_migration_files
+        uses: tj-actions/changed-files@v44 # Menggunakan action yang populer
+        with:
+          # Tentukan path ke folder migrasi Anda
+          files: internal/app/database/migration/**
 
       # 1. Otentikasi ke GCP menggunakan WIF (Workload Identity)
       - id: 'auth'
@@ -76,6 +86,7 @@ jobs:
       # 5. Deploy Cloud Run Job (Migrator)
       # Perintah ini akan "memperbarui" job jika sudah ada, atau membuatnya jika belum
       - name: Deploy and Run Migrator Job
+        if: steps.check_migration_files.outputs.any_changed == 'true'
         run: |
           gcloud run jobs deploy ${{ env.MIGRATOR_NAME }} \
             --image ${{ env.ARTIFACT_REGISTRY }}/${{ env.MIGRATOR_NAME }}:latest \
@@ -88,7 +99,12 @@ jobs:
 
       # 6. Jalankan Job dan tunggu sampai selesai
       - name: Execute Migrator Job
+        if: steps.check_migration_files.outputs.any_changed == 'true'
         run: gcloud run jobs execute ${{ env.MIGRATOR_NAME }} --region ${{ env.REGION }} --wait
+
+      - name: Log Skip
+        if: steps.check_files.outputs.any_changed != 'true'
+        run: echo "No changes found in 'internal/app/database/migration'. Skipping database migration."
 
   deploy-api-service:
     name: Deploy API Service
