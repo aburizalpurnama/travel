@@ -1,20 +1,26 @@
-run:
-  skip-dirs:
-    - "internal/app/database/migration"
-
 issues:
-  exclude:
-    - ".*_test.go$"
-    - ".*.sql$"
+  exclude-rules:
+    - path: "internal/app/database/migration/"
+      linters:
+        - errcheck
+        - govet
+        - staticcheck
+        - unused
+        - goimports
+        - gofmt
+        - bodyclose
+        - gosimple
+        - ineffassign
+        - typecheck
 
 linters-settings:
-  errcheck:
-    check-blank: true
   govet:
     enable:
       - shadow
   goimports:
     local-prefixes: github.com/aburizalpurnama/travel
+  errcheck:
+    check-blank: true
 
 linters:
   disable-all: true
@@ -25,7 +31,7 @@ linters:
     - unused
     - goimports
     - gofmt
-    - bodyclose     # Wajib untuk API
+    - bodyclose
     - gosimple
     - ineffassign
     - typecheck
