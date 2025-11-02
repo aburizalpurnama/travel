@@ -1,5 +1,5 @@
-run:
-  skip-files:
+issues:
+  exclude:
     - ".*_test.go$"
     - ".*.sql$"
     - "internal/app/database/migration/.*.go$"
@@ -8,20 +8,21 @@ linters-settings:
   errcheck:
     check-blank: true
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
   goimports:
     local-prefixes: github.com/aburizalpurnama/travel
 
 linters:
   disable-all: true
   enable:
-    - errcheck        # Memeriksa error yang tidak di-handle
-    - govet           # Analisis standar Go untuk kode yang mencurigakan
-    - staticcheck     # Kumpulan linter statis modern yang sangat kuat
-    - unused          # Memeriksa kode yang tidak terpakai
-    - goimports       # Mengatur 'imports'
-    - gofmt           # Memeriksa format kode
-    - bodyclose       # (SANGAT KRUSIAL untuk API) Memeriksa response body yang lupa ditutup
-    - gosimple        # Menyarankan penyederhanaan kode
-    - ineffassign     # Menemukan variabel yang di-assign tapi tidak efektif
-    - typecheck       # Memeriksa tipe (seperti 'go build')
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - goimports
+    - gofmt
+    - bodyclose     # Wajib untuk API
+    - gosimple
+    - ineffassign
+    - typecheck
