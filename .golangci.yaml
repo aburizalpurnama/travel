@@ -1,8 +1,11 @@
+run:
+  skip-dirs:
+    - "internal/app/database/migration"
+
 issues:
   exclude:
     - ".*_test.go$"
     - ".*.sql$"
-    - "internal/app/database/migration/.*.go$"
 
 linters-settings:
   errcheck:
