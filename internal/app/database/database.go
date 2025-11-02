@@ -107,8 +107,8 @@ func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
 
 	err = retryOperation(op)
 	if err != nil {
-		db.Close()      // Tutup koneksi yang gagal
-		return nil, err // Kembalikan error terakhir jika semua percobaan gagal
+		err = db.Close() // Tutup koneksi yang gagal
+		return nil, err  // Kembalikan error terakhir jika semua percobaan gagal
 	}
 
 	log.Println("✅ Koneksi database (Native SQL) berhasil dibuat!")
