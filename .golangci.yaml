@@ -1,19 +1,13 @@
 version: "2"
 
-issues:
-  exclude-rules:
-    - path_prefix: "internal/app/database/migration"
-
-linters-settings:
-  govet:
-    enable:
-      - shadow
-  goimports:
-    local-prefixes: github.com/aburizalpurnama/travel
-  errcheck:
-    check-blank: true
-
 linters:
+  exclusions:
+    paths:
+      - internal/app/database/migration
+  settings:
+    govet:
+      enable:
+        - shadow
   disable-all: true
   enable:
     - errcheck
@@ -25,4 +19,3 @@ linters:
     - bodyclose
     - gosimple
     - ineffassign
-    - typecheck
