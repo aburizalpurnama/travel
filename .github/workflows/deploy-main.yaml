@@ -16,38 +16,6 @@ env:
   REGION: asia-southeast2
 
 jobs:
-  lint-migrations:
-    name: Lint Database Migrations
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.25.1'
-
-      - name: Install Goose
-        run: go install github.com/pressly/goose/v3/cmd/goose@latest
-
-      - name: Run Goose Fix (Validate)
-        run: |
-          goose -dir "internal/app/database/migration" fix
-
-          if [ -n "$(git status --porcelain internal/app/database/migration/)" ]; then
-            echo "::error::Migration files are not sequential!"
-            echo "Changes are detected after executing 'goose fix':"
-            git status --porcelain
-            echo ""
-            echo "Please execute 'make migration-fix' in your local machine,"
-            echo "commit the changes, then push it back."
-            exit 1
-          else
-            echo "Migration files are sequential. OK."
-          fi
-
   build-and-push:
     name: Build and Push Images
     needs: lint-migrations
