@@ -1,17 +1,6 @@
 issues:
   exclude-rules:
-    - path: "internal/app/database/migration/"
-      linters:
-        - errcheck
-        - govet
-        - staticcheck
-        - unused
-        - goimports
-        - gofmt
-        - bodyclose
-        - gosimple
-        - ineffassign
-        - typecheck
+    - path_prefix: "internal/app/database/migration"
 
 linters-settings:
   govet:
