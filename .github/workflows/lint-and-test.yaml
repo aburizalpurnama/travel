@@ -31,7 +31,7 @@ jobs:
             echo "Changes are detected after executing 'goose fix':"
             git status --porcelain
             echo ""
-            echo "Please execute 'make migration-fix' in your local machine,"
+            echo "Please execute 'make migration-fix' or 'goose -dir "internal/app/database/migration" fix' in your local machine,"
             echo "commit the changes, then push it back."
             exit 1
           else
