@@ -55,7 +55,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Download Go Modules
@@ -64,7 +64,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1
+          version: v2.6
 
   unit-tests:
     name: Unit Tests (with Race Detector)
