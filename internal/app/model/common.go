@@ -1,5 +1,3 @@
 package model
 
-type Actor struct {
-	
-}
+type Actor struct{}
