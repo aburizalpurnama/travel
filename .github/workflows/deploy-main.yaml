@@ -18,7 +18,6 @@ env:
 jobs:
   build-and-push:
     name: Build and Push Images
-    needs: lint-migrations
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
