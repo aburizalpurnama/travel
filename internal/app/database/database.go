@@ -80,7 +80,10 @@ func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
 
 	err = retryOperation(op)
 	if err != nil {
-		db.Close() // Clean up the failed connection
+		err = db.Close() // Clean up the failed connection
+		if err != nil {
+			log.Fatalf("Failed to close database connection: %s", err.Error())
+		}
 		return nil, err
 	}
 
