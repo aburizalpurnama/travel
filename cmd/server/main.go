@@ -47,13 +47,13 @@ func main() {
 
 func injectDependencies(db *gorm.DB) *router.Option {
 	userRepository := user.NewUserRepository(db)
-	productRepository := product.NewProductRepository(db)
+	productRepository := product.NewRepository(db)
 
 	userService := user.NewUserService(userRepository)
-	productService := product.NewProductService(productRepository)
+	productService := product.NewService(productRepository)
 
 	userHandler := user.NewUserHandler(userService)
-	productHandler := product.NewProductHandler(productService)
+	productHandler := product.NewHandler(productService)
 
 	return &router.Option{
 		UserHandler:    userHandler,

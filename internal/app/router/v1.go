@@ -12,7 +12,7 @@ import (
 type Option struct {
 	Logger         *slog.Logger
 	UserHandler    *user.UserHandler
-	ProductHandler *product.ProductHandler
+	ProductHandler *product.Handler
 }
 
 func SetupRoutesV1(app *fiber.App, opt *Option) {

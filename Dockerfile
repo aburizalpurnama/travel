@@ -12,7 +12,7 @@ RUN apk add ca-certificates
 
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o build/server ./cmd/server/main.go
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o build/migrator ./cmd/migration/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o build/migrator ./cmd/migrator/main.go
 
 # Target untuk server
 FROM alpine:latest AS server
@@ -28,7 +28,7 @@ CMD ["./server"]
 FROM alpine:latest AS migrator
 WORKDIR /app
 
-# COPY --from=builder /app/internal/app/database/migration internal/app/database/migration
+# COPY --from=builder /app/internal/app/database/migrator internal/app/database/migrator
 
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
