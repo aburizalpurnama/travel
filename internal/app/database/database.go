@@ -13,34 +13,9 @@ import (
 )
 
 const (
-	// Tentukan jumlah percobaan dan waktu tunggu
-	maxRetries    = 10              // Coba 10 kali
-	retryInterval = 5 * time.Second // Tunggu 5 detik antar percobaan
+	maxRetries    = 10              // Number of connection attempts
+	retryInterval = 5 * time.Second // Wait time between attempts
 )
-
-// retryOperation adalah helper generik untuk menjalankan operasi dengan retry
-func retryOperation(operation func() error) error {
-	var lastError error
-
-	for i := 1; i <= maxRetries; i++ {
-		lastError = operation() // Jalankan operasi (misal: connect atau ping)
-		if lastError == nil {
-			return nil // Sukses, tidak perlu error
-		}
-
-		// Jika gagal, catat log dan tunggu sebelum mencoba lagi
-		log.Printf("[DB Connect] Percobaan %d/%d gagal: %v", i, maxRetries, lastError)
-		if i < maxRetries {
-			log.Printf("Mencoba lagi dalam %v...", retryInterval)
-			time.Sleep(retryInterval)
-		}
-	}
-
-	// Jika loop selesai, berarti semua percobaan gagal
-	return fmt.Errorf("gagal terhubung ke database setelah %d percobaan: %w", maxRetries, lastError)
-}
-
-// --- FUNGSI ANDA YANG SUDAH DIPERBAIKI ---
 
 func NewGorm(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
@@ -65,19 +40,19 @@ func NewGorm(cfg *config.Config) (*gorm.DB, error) {
 	var db *gorm.DB
 	var err error
 
-	// Gunakan helper retry untuk membungkus gorm.Open
-	// gorm.Open sudah otomatis melakukan "ping" saat koneksi
+	// Define the connection operation
 	op := func() error {
+		// gorm.Open attempts to connect and ping the DB automatically
 		db, err = gorm.Open(postgres.Open(dsn), gormConfig)
 		return err
 	}
 
 	err = retryOperation(op)
 	if err != nil {
-		return nil, err // Kembalikan error terakhir jika semua percobaan gagal
+		return nil, err
 	}
 
-	log.Println("✅ Koneksi database GORM berhasil dibuat!")
+	log.Println("✅ GORM database connection established!")
 	return db, nil
 }
 
@@ -92,29 +67,51 @@ func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
 		cfg.DBTimezone,
 	)
 
-	// Ganti "pgx" dengan "pgx/v5/stdlib" jika Anda menggunakan pgx v5
-	// sql.Open TIDAK membuka koneksi, jadi ini tidak akan gagal.
+	// sql.Open only prepares the DSN; it does not connect.
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, fmt.Errorf("gagal mem-parsing DSN: %w", err)
+		return nil, fmt.Errorf("failed to parse DSN: %w", err)
 	}
 
-	// Gunakan helper retry untuk membungkus db.Ping()
-	// db.Ping() adalah yang BENAR-BENAR menguji koneksi.
+	// Define the ping operation to validate the connection
 	op := func() error {
 		return db.Ping()
 	}
 
 	err = retryOperation(op)
 	if err != nil {
-		err = db.Close() // Tutup koneksi yang gagal
-		return nil, err  // Kembalikan error terakhir jika semua percobaan gagal
+		err = db.Close() // Clean up the failed connection
+		if err != nil {
+			log.Fatalf("Failed to close database connection: %s", err.Error())
+		}
+		return nil, err
 	}
 
-	log.Println("✅ Koneksi database (Native SQL) berhasil dibuat!")
+	log.Println("✅ Native SQL database connection established!")
 	return db, nil
 }
 
+// retryOperation provides a generic wrapper to execute an operation with retry logic.
+func retryOperation(operation func() error) error {
+	var lastError error
+
+	for i := 1; i <= maxRetries; i++ {
+		lastError = operation()
+		if lastError == nil {
+			return nil // Success
+		}
+
+		log.Printf("[DB Connect] Attempt %d/%d failed: %v", i, maxRetries, lastError)
+		if i < maxRetries {
+			log.Printf("Retrying in %v...", retryInterval)
+			time.Sleep(retryInterval)
+		}
+	}
+
+	return fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, lastError)
+}
+
+// getLogLevel sets GORM log level based on application environment.
 func getLogLevel(v string) logger.LogLevel {
 	switch v {
 	case "development":
@@ -128,6 +125,7 @@ func getLogLevel(v string) logger.LogLevel {
 	}
 }
 
+// convertLogLevel sets GORM log level based on a specific config string.
 func convertLogLevel(v string) logger.LogLevel {
 	switch v {
 	case "error":

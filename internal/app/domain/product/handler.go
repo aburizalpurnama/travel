@@ -12,16 +12,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type ProductHandler struct {
+type Handler struct {
 	service contract.ProductService
 }
 
-// NewProductHandler membuat instance baru dari ProductHandler
-func NewProductHandler(service contract.ProductService) *ProductHandler {
-	return &ProductHandler{service: service}
+// NewHandler membuat instance baru dari ProductHandler
+func NewHandler(service contract.ProductService) *Handler {
+	return &Handler{service: service}
 }
 
-func (h *ProductHandler) CreateProduct(c *fiber.Ctx) error {
+func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 	var req payload.ProductCreateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.JSONParserError(err))
@@ -61,7 +61,7 @@ func (h *ProductHandler) CreateProduct(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(response.Success(product, nil))
 }
 
-func (h *ProductHandler) GetProducts(c *fiber.Ctx) error {
+func (h *Handler) GetProducts(c *fiber.Ctx) error {
 	req := payload.ProductGetAllRequest{}
 	if err := c.QueryParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -98,7 +98,7 @@ func (h *ProductHandler) GetProducts(c *fiber.Ctx) error {
 	return c.JSON(response.Success(products, pagination))
 }
 
-func (h *ProductHandler) GetProduct(c *fiber.Ctx) error {
+func (h *Handler) GetProduct(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(
@@ -134,7 +134,7 @@ func (h *ProductHandler) GetProduct(c *fiber.Ctx) error {
 	return c.JSON(response.Success(product, nil))
 }
 
-func (h *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
+func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
@@ -164,7 +164,7 @@ func (h *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
 	return c.JSON(response.Success(product, nil))
 }
 
-func (h *ProductHandler) DeleteProduct(c *fiber.Ctx) error {
+func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})

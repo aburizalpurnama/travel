@@ -2,7 +2,6 @@ package product
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
@@ -17,29 +16,21 @@ import (
 	"gorm.io/gorm"
 )
 
-type productService struct {
+type Service struct {
 	repo contract.ProductRepository
 }
 
-// NewProductService membuat instance baru dari product service
-func NewProductService(repo contract.ProductRepository) contract.ProductService {
-	return &productService{repo: repo}
+// NewService membuat instance baru dari product service
+func NewService(repo contract.ProductRepository) contract.ProductService {
+	return &Service{repo: repo}
 }
 
-func (s *productService) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
+func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
 	product := &model.Product{}
 	err := copier.Copy(&product, &req)
 	if err != nil {
 		return nil, err
 	}
-
-	actor := struct {
-		ID   uint   `json:"id"`
-		Name string `json:"name"`
-	}{ID: 1, Name: "John Doe"}
-
-	actorJSON, _ := json.Marshal(actor)
-	product.CreatedBy = actorJSON
 
 	product.Price, err = decimal.NewFromString(req.Price)
 	if err != nil {
@@ -70,7 +61,7 @@ func (s *productService) CreateProduct(ctx context.Context, req payload.ProductC
 	return res, nil
 }
 
-func (s *productService) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
+func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
 	var count int64
 	var products []model.Product
 
@@ -110,7 +101,7 @@ func (s *productService) GetAllProducts(ctx context.Context, req payload.Product
 	return res, response.NewPagination(req.Page, req.Size, &count), nil
 }
 
-func (s *productService) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
+func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
 	product, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -129,7 +120,7 @@ func (s *productService) GetProductByID(ctx context.Context, id uint) (*payload.
 	return res, nil
 }
 
-func (s *productService) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
+func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
 	product, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -156,7 +147,7 @@ func (s *productService) UpdateProduct(ctx context.Context, id uint, req payload
 	return res, nil
 }
 
-func (s *productService) DeleteProduct(ctx context.Context, id uint) error {
+func (s *Service) DeleteProduct(ctx context.Context, id uint) error {
 	_, err := s.repo.FindByID(ctx, id)
 	if err != nil {
 		return err

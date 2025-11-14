@@ -1,5 +1,12 @@
-.PHONY: all build run run-hot test test-cover lint tidy clean docker-build docker-build-server docker-build-migrator docker-build-all podman-build podman-build-server podman-build-migrator podman-build-all help install-tools migration-create migration-up migration-down migration-status
+# This tells Make that these targets aren't actual files.
+# This prevents conflicts if a file with the same name exists.
+.PHONY: all build run run-hot test test-cover lint tidy clean \
+docker-build docker-build-server docker-build-migrator docker-build-all \
+podman-build podman-build-server podman-build-migrator podman-build-all \
+help install-tools \
+migration-create migration-up migration-down migration-status migration-fix
 
+# Sets the default command to run when 'make' is called without arguments.
 .DEFAULT_GOAL := help
 
 # --- Variables ---
@@ -18,10 +25,10 @@ GOOSE_VERSION := latest
 AIR_VERSION := latest
 GOLANGCI_VERSION := v2.5.0
 
-# Default binary name untuk Linux/macOS
+# Default binary name for Linux/macOS
 BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME)
 
-# Mendeteksi OS Windows (MINGW atau CYGWIN) dan menambahkan .exe
+# Detect Windows OS (MINGW or CYGWIN) and append .exe
 ifeq ($(findstring MINGW,$(shell uname -s)),MINGW)
     BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME).exe
 endif
@@ -29,7 +36,7 @@ ifeq ($(findstring CYGWIN,$(shell uname -s)),CYGWIN)
     BINARY_FILE := $(TMP_DIR)/$(BINARY_NAME).exe
 endif
 
-# Get GOBIN or GOHOME/bin as instalation path
+# Get GOBIN (where Go installs binaries), fallback to GOPATH/bin
 GOBIN ?= $(shell go env GOBIN)
 ifeq ($(GOBIN),)
 GOBIN = $(shell go env GOPATH)/bin
@@ -100,13 +107,13 @@ test: ## Run all unit tests for internal packages
 	@echo "Running tests..."
 	@go list ./internal/... | xargs go test -v -cover
 
-test-cover: ## Run all unit tests and open coverage report
+test-cover: ## Run tests and open the HTML coverage report
 	@echo "Running tests with coverage..."
 	@go list ./internal/... | xargs go test -coverprofile=coverage.out
 
 	@go tool cover -html=coverage.out
 
-lint: ## Run the linter (golangci-lint)
+lint: ## Run the Go linter (golangci-lint)
 	@echo "Running linter..."
 	@golangci-lint run
 
@@ -141,32 +148,32 @@ docker-build: build ## Build the production Container image
 	@echo "Building Container image..."
 	@docker build -t $(BINARY_NAME):latest .
 
-docker-build-server:
+docker-build-server: ## Build the server container image (production stage)
 	@echo "Building server image..."
 	@docker build --target server -t $(APP_IMAGE_NAME):$(TAG) .
 
-docker-build-migrator:
+docker-build-migrator: ## Build the migrator container image (migrator stage)
 	@echo "Building migrator image..."
 	@docker build --target migrator -t $(MIGRATOR_IMAGE_NAME):$(TAG) .
 
-docker-build-all: docker-build-server docker-build-migrator
+docker-build-all: docker-build-server docker-build-migrator ## Build all container images (server and migrator)
 
 # --- Podman ---
-podman-build: build ## Build the production container image
+podman-build: build ## Build the main production container image using Podman
 	@echo "Building container image..."
 	@podman build -t $(BINARY_NAME):latest .
 
-podman-build-server:
+podman-build-server: ## Build the server container image using Podman
 	@echo "Building server image..."
 	podman build --target server -t $(APP_IMAGE_NAME):$(TAG) .
 
-podman-build-migrator:
+podman-build-migrator: ## Build the migrator container image using Podman
 	@echo "Building migrator image..."
 	@podman build --target migrator -t $(MIGRATOR_IMAGE_NAME):$(TAG) .
 
-podman-build-all: podman-build-server podman-build-migrator
+podman-build-all: podman-build-server podman-build-migrator ## Build all container images using Podman
 
-clean: ## Clean build artifacts
+clean: ## Clean build artifacts (tmp dir, build dir, coverage)
 	@echo "Cleaning build artifacts..."
 	@rm -rf build
 	@rm -f coverage.out
