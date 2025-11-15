@@ -12,6 +12,7 @@ import (
 	"github.com/aburizalpurnama/travel/internal/app/repository"
 	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
+	"github.com/aburizalpurnama/travel/internal/pkg/mapper"
 	"github.com/gofiber/fiber/v2"
 	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
 	"gorm.io/gorm"
@@ -51,7 +52,9 @@ func injectDependencies(db *gorm.DB) *router.Option {
 	userService := user.NewUserService(userRepository)
 
 	uow := repository.NewGormUnitOfWork(db)
-	productService := product.NewService(uow)
+	mapper := mapper.NewCopierMapper()
+
+	productService := product.NewService(uow, mapper)
 
 	userHandler := user.NewUserHandler(userService)
 	productHandler := product.NewHandler(productService)

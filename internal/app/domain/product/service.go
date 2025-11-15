@@ -2,6 +2,7 @@ package product
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
@@ -10,32 +11,40 @@ import (
 	"github.com/aburizalpurnama/travel/internal/pkg/apperror"
 	"github.com/aburizalpurnama/travel/internal/pkg/dberror"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
-	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
 type service struct {
-	uow contract.UnitOfWork
+	uow    contract.UnitOfWork
+	mapper contract.Mapper
 }
 
 // NewService membuat instance baru dari product service
-func NewService(uow contract.UnitOfWork) contract.ProductService {
-	return &service{uow: uow}
+func NewService(uow contract.UnitOfWork, mapper contract.Mapper) contract.ProductService {
+	return &service{uow: uow, mapper: mapper}
 }
 
 func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
 	product := &model.Product{}
-	err := copier.Copy(&product, &req)
+	err := s.mapper.ToModel(&req, product)
 	if err != nil {
-		return nil, err
+		return nil, apperror.New(apperror.Internal, "failed to map request", err, nil)
 	}
 
 	product.Price, err = decimal.NewFromString(req.Price)
 	if err != nil {
 		return nil, err
 	}
+
+	actor := struct {
+		ID   uint   `json:"id"`
+		Name string `json:"name"`
+	}{ID: 1, Name: "John Doe"}
+
+	actorJSON, _ := json.Marshal(actor)
+	product.CreatedBy = actorJSON
 
 	// Add required business logic here
 
@@ -58,13 +67,12 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 			}
 		}
 
-		return nil, apperror.New(apperror.Internal, "failed to save product", err, nil)
+		return nil, apperror.New(apperror.Internal, "failed to create product", err, nil)
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(&res, created)
-	if err != nil {
-		return nil, err
+	if err := s.mapper.ToResponse(created, res); err != nil {
+		return nil, apperror.New(apperror.Internal, "failed to map response", err, nil)
 	}
 
 	return res, nil
@@ -102,7 +110,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	}
 
 	var res []payload.ProductBaseResponse
-	err = copier.Copy(&res, &products)
+	err = s.mapper.ToResponse(&products, &res)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,7 +129,7 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(res, product)
+	err = s.mapper.ToResponse(&product, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +143,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 		return nil, err
 	}
 
-	err = copier.CopyWithOption(&product, &req, copier.Option{IgnoreEmpty: true})
+	err = s.mapper.ToModel(&req, &product)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +156,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(res, updated)
+	err = s.mapper.ToResponse(&updated, &res)
 	if err != nil {
 		return nil, err
 	}
