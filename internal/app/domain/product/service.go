@@ -57,7 +57,6 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 
 	var created *model.Product
 	err = s.uow.Execute(ctx, func(uowCtx context.Context, uow contract.UnitOfWork) error {
-		var err error
 		created, err = uow.Product().Save(uowCtx, product)
 		if err != nil {
 			return err

@@ -9,7 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
-var repositoryTracer trace.Tracer = otel.Tracer("product.repository")
+// repositoryTracer
+var _ trace.Tracer = otel.Tracer("product.repository")
 
 // Repository implements the contract.ProductRepository interface.
 // It embeds a generic GORM repository to handle basic CRUD operations.
