@@ -11,12 +11,14 @@ import (
 // It embeds a generic GORM repository to handle basic CRUD operations.
 type Repository struct {
 	*repository.GORM[model.Product, model.ProductFilter]
+	db *gorm.DB
 }
 
 // NewRepository creates a new product repository instance.
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
 		GORM: repository.NewGORM[model.Product, model.ProductFilter](db),
+		db:   db,
 	}
 }
 

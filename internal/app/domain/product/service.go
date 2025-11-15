@@ -16,16 +16,16 @@ import (
 	"gorm.io/gorm"
 )
 
-type Service struct {
-	repo contract.ProductRepository
+type service struct {
+	uow contract.UnitOfWork
 }
 
 // NewService membuat instance baru dari product service
-func NewService(repo contract.ProductRepository) contract.ProductService {
-	return &Service{repo: repo}
+func NewService(uow contract.UnitOfWork) contract.ProductService {
+	return &service{uow: uow}
 }
 
-func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
+func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
 	product := &model.Product{}
 	err := copier.Copy(&product, &req)
 	if err != nil {
@@ -39,7 +39,16 @@ func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 
 	// Add required business logic here
 
-	created, err := s.repo.Save(ctx, product)
+	var created *model.Product
+	err = s.uow.Execute(ctx, func(uow contract.UnitOfWork) error {
+		var err error
+		created, err = uow.Product().Save(ctx, product)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		if pgErr := dberror.GetError(err); pgErr != nil {
 			switch pgErr.Code {
@@ -61,7 +70,7 @@ func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	return res, nil
 }
 
-func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
+func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
 	var count int64
 	var products []model.Product
 
@@ -69,7 +78,7 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		count, err = s.repo.Count(groupCtx, req.ProductFilter)
+		count, err = s.uow.Product().Count(groupCtx, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -79,7 +88,7 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		products, err = s.repo.FindAll(ctx, req.Page, req.Size, req.ProductFilter)
+		products, err = s.uow.Product().FindAll(ctx, req.Page, req.Size, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -101,8 +110,8 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	return res, response.NewPagination(req.Page, req.Size, &count), nil
 }
 
-func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
-	product, err := s.repo.FindByID(ctx, id)
+func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
+	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.New(apperror.ProductNotFound, "product not found", err, nil)
@@ -120,8 +129,8 @@ func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	return res, nil
 }
 
-func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
-	product, err := s.repo.FindByID(ctx, id)
+func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
+	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +142,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 
 	// Add required business logic here
 
-	updated, err := s.repo.Update(ctx, product)
+	updated, err := s.uow.Product().Update(ctx, product)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +156,11 @@ func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	return res, nil
 }
 
-func (s *Service) DeleteProduct(ctx context.Context, id uint) error {
-	_, err := s.repo.FindByID(ctx, id)
+func (s *service) DeleteProduct(ctx context.Context, id uint) error {
+	_, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	return s.repo.Delete(ctx, id)
+	return s.uow.Product().Delete(ctx, id)
 }

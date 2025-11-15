@@ -9,6 +9,7 @@ import (
 	"github.com/aburizalpurnama/travel/internal/app/database"
 	"github.com/aburizalpurnama/travel/internal/app/domain/product"
 	"github.com/aburizalpurnama/travel/internal/app/domain/user"
+	"github.com/aburizalpurnama/travel/internal/app/repository"
 	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
 	"github.com/gofiber/fiber/v2"
@@ -47,10 +48,10 @@ func main() {
 
 func injectDependencies(db *gorm.DB) *router.Option {
 	userRepository := user.NewUserRepository(db)
-	productRepository := product.NewRepository(db)
-
 	userService := user.NewUserService(userRepository)
-	productService := product.NewService(productRepository)
+
+	uow := repository.NewGormUnitOfWork(db)
+	productService := product.NewService(uow)
 
 	userHandler := user.NewUserHandler(userService)
 	productHandler := product.NewHandler(productService)
