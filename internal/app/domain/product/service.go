@@ -2,6 +2,7 @@ package product
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/aburizalpurnama/travel/internal/app/contract"
@@ -10,26 +11,33 @@ import (
 	"github.com/aburizalpurnama/travel/internal/pkg/apperror"
 	"github.com/aburizalpurnama/travel/internal/pkg/dberror"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
-	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
 
-type Service struct {
-	repo contract.ProductRepository
+var serviceTracer trace.Tracer = otel.Tracer("product.service")
+
+type service struct {
+	uow    contract.UnitOfWork
+	mapper contract.Mapper
 }
 
 // NewService membuat instance baru dari product service
-func NewService(repo contract.ProductRepository) contract.ProductService {
-	return &Service{repo: repo}
+func NewService(uow contract.UnitOfWork, mapper contract.Mapper) contract.ProductService {
+	return &service{uow: uow, mapper: mapper}
 }
 
-func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
+func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "CreateUser")
+	defer span.End()
+
 	product := &model.Product{}
-	err := copier.Copy(&product, &req)
+	err := s.mapper.ToModel(&req, product)
 	if err != nil {
-		return nil, err
+		return nil, apperror.New(apperror.Internal, "failed to map request", err, nil)
 	}
 
 	product.Price, err = decimal.NewFromString(req.Price)
@@ -37,9 +45,25 @@ func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 		return nil, err
 	}
 
+	actor := struct {
+		ID   uint   `json:"id"`
+		Name string `json:"name"`
+	}{ID: 1, Name: "John Doe"}
+
+	actorJSON, _ := json.Marshal(actor)
+	product.CreatedBy = actorJSON
+
 	// Add required business logic here
 
-	created, err := s.repo.Save(ctx, product)
+	var created *model.Product
+	err = s.uow.Execute(ctx, func(uowCtx context.Context, uow contract.UnitOfWork) error {
+		created, err = uow.Product().Save(uowCtx, product)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		if pgErr := dberror.GetError(err); pgErr != nil {
 			switch pgErr.Code {
@@ -49,19 +73,21 @@ func (s *Service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 			}
 		}
 
-		return nil, apperror.New(apperror.Internal, "failed to save product", err, nil)
+		return nil, apperror.New(apperror.Internal, "failed to create product", err, nil)
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(&res, created)
-	if err != nil {
-		return nil, err
+	if err := s.mapper.ToResponse(created, res); err != nil {
+		return nil, apperror.New(apperror.Internal, "failed to map response", err, nil)
 	}
 
 	return res, nil
 }
 
-func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
+func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
+	ctx, span := serviceTracer.Start(ctx, "GetAllProducts")
+	defer span.End()
+
 	var count int64
 	var products []model.Product
 
@@ -69,7 +95,7 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		count, err = s.repo.Count(groupCtx, req.ProductFilter)
+		count, err = s.uow.Product().Count(groupCtx, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -79,7 +105,7 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		products, err = s.repo.FindAll(ctx, req.Page, req.Size, req.ProductFilter)
+		products, err = s.uow.Product().FindAll(groupCtx, req.Page, req.Size, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -93,7 +119,7 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	}
 
 	var res []payload.ProductBaseResponse
-	err = copier.Copy(&res, &products)
+	err = s.mapper.ToResponse(&products, &res)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -101,8 +127,11 @@ func (s *Service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	return res, response.NewPagination(req.Page, req.Size, &count), nil
 }
 
-func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
-	product, err := s.repo.FindByID(ctx, id)
+func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "GetProductByID")
+	defer span.End()
+
+	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.New(apperror.ProductNotFound, "product not found", err, nil)
@@ -112,7 +141,7 @@ func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(res, product)
+	err = s.mapper.ToResponse(&product, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -120,26 +149,29 @@ func (s *Service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	return res, nil
 }
 
-func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
-	product, err := s.repo.FindByID(ctx, id)
+func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "UpdateProduct")
+	defer span.End()
+
+	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	err = copier.CopyWithOption(&product, &req, copier.Option{IgnoreEmpty: true})
+	err = s.mapper.ToModel(&req, &product)
 	if err != nil {
 		return nil, err
 	}
 
 	// Add required business logic here
 
-	updated, err := s.repo.Update(ctx, product)
+	updated, err := s.uow.Product().Update(ctx, product)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &payload.ProductBaseResponse{}
-	err = copier.Copy(res, updated)
+	err = s.mapper.ToResponse(&updated, &res)
 	if err != nil {
 		return nil, err
 	}
@@ -147,11 +179,14 @@ func (s *Service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	return res, nil
 }
 
-func (s *Service) DeleteProduct(ctx context.Context, id uint) error {
-	_, err := s.repo.FindByID(ctx, id)
+func (s *service) DeleteProduct(ctx context.Context, id uint) error {
+	ctx, span := serviceTracer.Start(ctx, "DeleteProduct")
+	defer span.End()
+
+	_, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	return s.repo.Delete(ctx, id)
+	return s.uow.Product().Delete(ctx, id)
 }
