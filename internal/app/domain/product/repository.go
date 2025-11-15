@@ -4,8 +4,12 @@ import (
 	"github.com/aburizalpurnama/travel/internal/app/contract"
 	"github.com/aburizalpurnama/travel/internal/app/model"
 	"github.com/aburizalpurnama/travel/internal/pkg/repository"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
+
+var repositoryTracer trace.Tracer = otel.Tracer("product.repository")
 
 // Repository implements the contract.ProductRepository interface.
 // It embeds a generic GORM repository to handle basic CRUD operations.

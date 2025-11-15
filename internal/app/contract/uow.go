@@ -12,5 +12,5 @@ type UnitOfWork interface {
 	// Execute runs the given function 'fn' within a single atomic transaction.
 	// If 'fn' returns an error, the transaction is rolled back.
 	// If 'fn' succeeds, the transaction is committed.
-	Execute(ctx context.Context, fn func(UnitOfWork) error) error
+	Execute(ctx context.Context, fn func(context.Context, UnitOfWork) error) error
 }

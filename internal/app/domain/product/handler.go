@@ -10,7 +10,11 @@ import (
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var handlerTracer trace.Tracer = otel.Tracer("product.handler")
 
 type Handler struct {
 	service contract.ProductService
@@ -22,6 +26,9 @@ func NewHandler(service contract.ProductService) *Handler {
 }
 
 func (h *Handler) CreateProduct(c *fiber.Ctx) error {
+	ctx, span := handlerTracer.Start(c.Context(), "CreateProduct")
+	defer span.End()
+
 	var req payload.ProductCreateRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.JSONParserError(err))
@@ -32,7 +39,7 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
-	product, err := h.service.CreateProduct(c.Context(), req)
+	product, err := h.service.CreateProduct(ctx, req)
 	if err != nil {
 		c.Locals("error", err)
 
@@ -62,6 +69,9 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 }
 
 func (h *Handler) GetProducts(c *fiber.Ctx) error {
+	ctx, span := handlerTracer.Start(c.Context(), "GetProducts")
+	defer span.End()
+
 	req := payload.ProductGetAllRequest{}
 	if err := c.QueryParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -69,7 +79,7 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 
 	req.SetDefault()
 
-	products, pagination, err := h.service.GetAllProducts(c.Context(), req)
+	products, pagination, err := h.service.GetAllProducts(ctx, req)
 	if err != nil {
 		c.Locals("error", err)
 
@@ -99,6 +109,9 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 }
 
 func (h *Handler) GetProduct(c *fiber.Ctx) error {
+	ctx, span := handlerTracer.Start(c.Context(), "GetProduct")
+	defer span.End()
+
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(
@@ -106,7 +119,7 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 		)
 	}
 
-	product, err := h.service.GetProductByID(c.Context(), uint(id))
+	product, err := h.service.GetProductByID(ctx, uint(id))
 	if err != nil {
 		c.Locals("error", err)
 
@@ -135,6 +148,9 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 }
 
 func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
+	ctx, span := handlerTracer.Start(c.Context(), "UpdateProduct")
+	defer span.End()
+
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
@@ -152,7 +168,7 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
-	product, err := h.service.UpdateProduct(c.Context(), uint(id), req)
+	product, err := h.service.UpdateProduct(ctx, uint(id), req)
 	if err != nil {
 		c.Locals("error", err)
 
@@ -165,12 +181,15 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 }
 
 func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
+	ctx, span := handlerTracer.Start(c.Context(), "DeleteProduct")
+	defer span.End()
+
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	err = h.service.DeleteProduct(c.Context(), uint(id))
+	err = h.service.DeleteProduct(ctx, uint(id))
 	if err != nil {
 		c.Locals("error", err)
 

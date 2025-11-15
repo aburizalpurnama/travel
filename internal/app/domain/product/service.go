@@ -12,9 +12,13 @@ import (
 	"github.com/aburizalpurnama/travel/internal/pkg/dberror"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
 	"github.com/shopspring/decimal"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 )
+
+var serviceTracer trace.Tracer = otel.Tracer("product.service")
 
 type service struct {
 	uow    contract.UnitOfWork
@@ -27,6 +31,9 @@ func NewService(uow contract.UnitOfWork, mapper contract.Mapper) contract.Produc
 }
 
 func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "CreateUser")
+	defer span.End()
+
 	product := &model.Product{}
 	err := s.mapper.ToModel(&req, product)
 	if err != nil {
@@ -49,9 +56,9 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	// Add required business logic here
 
 	var created *model.Product
-	err = s.uow.Execute(ctx, func(uow contract.UnitOfWork) error {
+	err = s.uow.Execute(ctx, func(uowCtx context.Context, uow contract.UnitOfWork) error {
 		var err error
-		created, err = uow.Product().Save(ctx, product)
+		created, err = uow.Product().Save(uowCtx, product)
 		if err != nil {
 			return err
 		}
@@ -79,6 +86,9 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 }
 
 func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
+	ctx, span := serviceTracer.Start(ctx, "GetAllProducts")
+	defer span.End()
+
 	var count int64
 	var products []model.Product
 
@@ -96,7 +106,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		products, err = s.uow.Product().FindAll(ctx, req.Page, req.Size, req.ProductFilter)
+		products, err = s.uow.Product().FindAll(groupCtx, req.Page, req.Size, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -119,6 +129,9 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 }
 
 func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "GetProductByID")
+	defer span.End()
+
 	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -138,6 +151,9 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 }
 
 func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
+	ctx, span := serviceTracer.Start(ctx, "UpdateProduct")
+	defer span.End()
+
 	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -165,6 +181,9 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 }
 
 func (s *service) DeleteProduct(ctx context.Context, id uint) error {
+	ctx, span := serviceTracer.Start(ctx, "DeleteProduct")
+	defer span.End()
+
 	_, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		return err
