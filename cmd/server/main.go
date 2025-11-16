@@ -50,7 +50,8 @@ func main() {
 
 	// Ensure tracer provider shuts down gracefully when the application exits
 	defer func() {
-		if err := shutdownTracer(context.Background()); err != nil {
+		err = shutdownTracer(context.Background())
+		if err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()

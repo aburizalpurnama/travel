@@ -154,12 +154,14 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 	}
 
 	var req payload.ProductUpdateRequest
-	if err := c.BodyParser(&req); err != nil {
+	err = c.BodyParser(&req)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.JSONParserError(err))
 	}
 
 	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
+	err = validate.Struct(req)
+	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
