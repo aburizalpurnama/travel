@@ -9,110 +9,91 @@ import (
 
 	"github.com/aburizalpurnama/travel/internal/app/database"
 	"github.com/aburizalpurnama/travel/internal/app/domain/product"
-	"github.com/aburizalpurnama/travel/internal/app/domain/user"
 	"github.com/aburizalpurnama/travel/internal/app/repository"
 	"github.com/aburizalpurnama/travel/internal/app/router"
 	"github.com/aburizalpurnama/travel/internal/config"
 	"github.com/aburizalpurnama/travel/internal/pkg/mapper"
+	"github.com/aburizalpurnama/travel/internal/pkg/telemetry"
 	"github.com/gofiber/fiber/v2"
 	fiberLogger "github.com/gofiber/fiber/v2/middleware/logger"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"gorm.io/gorm"
 )
 
 func main() {
+	// Load configuration from environment variables or .env file
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Fatalf("Error loading config: %v", err)
 	}
 
-	db, err := database.NewGorm(cfg)
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
-
+	// Configure logger level based on environment
 	logLevel := getLogLevel(cfg.AppEnv)
 	if cfg.AppLogLevel != "" {
 		logLevel = convertLogLevel(cfg.AppLogLevel)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel}))
-	routerOpts := injectDependencies(db)
-	routerOpts.Logger = logger
 
-	tp, err := initTracer()
+	// Initialize OpenTelemetry tracer provider
+	shutdownTracer, err := telemetry.InitTracerProvider(telemetry.Option{
+		Enabled:      cfg.Tracing.Enabled,
+		ServiceName:  cfg.AppName,
+		Environment:  cfg.AppEnv,
+		Exporter:     cfg.Tracing.Exporter,
+		OtlpEndpoint: cfg.Tracing.OtlpEndpoint,
+		OtlpInsecure: cfg.Tracing.OtlpInsecure,
+		OtlpHeaders:  cfg.Tracing.OtlpHeaders,
+	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error initializing tracer: %v", err)
 	}
-	// Pastikan tracer di-flush saat aplikasi berhenti
+
+	// Ensure tracer provider shuts down gracefully when the application exits
 	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
+		err = shutdownTracer(context.Background())
+		if err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()
 
+	// Initialize database connection
+	db, err := database.NewGorm(cfg)
+	if err != nil {
+		log.Fatalf("Could not connect to the database: %v", err)
+	}
+
+	// Inject dependencies and configure router options
+	routerOpts := injectDependencies(db)
+	routerOpts.Logger = logger
+
+	// Initialize Fiber app
 	app := fiber.New()
 	app.Use(fiberLogger.New())
 
+	// Setup API routes
 	router.SetupRoutesV1(app, routerOpts)
 
+	// Start the server
 	port := fmt.Sprintf(":%d", cfg.ServerPort)
 	log.Fatal(app.Listen(port))
 }
 
+// injectDependencies wires up the application dependencies (repositories, services, handlers).
 func injectDependencies(db *gorm.DB) *router.Option {
-	userRepository := user.NewUserRepository(db)
-	userService := user.NewUserService(userRepository)
-
 	uow := repository.NewGormUnitOfWork(db)
 	mapper := mapper.NewCopierMapper()
 
 	productService := product.NewService(uow, mapper)
-
-	userHandler := user.NewUserHandler(userService)
 	productHandler := product.NewHandler(productService)
 
 	return &router.Option{
-		UserHandler:    userHandler,
 		ProductHandler: productHandler,
 	}
 }
 
-// initTracer menginisialisasi OpenTelemetry TracerProvider
-func initTracer() (*sdktrace.TracerProvider, error) {
-	// 1. Buat Exporter
-	// Ganti 'stdouttrace' dengan 'jaeger', 'otlptracehttp', dll. untuk produksi
-	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. Buat Resource (metadata tentang aplikasi Anda)
-	res := resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.ServiceName("travel-api-service"), // Ganti dengan nama service Anda
-		attribute.String("environment", os.Getenv("APP_ENV")),
-	)
-
-	// 3. Buat Tracer Provider
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(res),
-	)
-
-	// 4. Set sebagai Global Provider (ini yang membuatnya "agnostik" di layer lain)
-	otel.SetTracerProvider(tp)
-
-	return tp, nil
-}
-
-func getLogLevel(v string) slog.Level {
-	switch v {
+// getLogLevel returns the appropriate slog.Level based on the application environment.
+func getLogLevel(env string) slog.Level {
+	switch env {
 	case "development":
 		return slog.LevelDebug
 	case "staging":
@@ -124,8 +105,9 @@ func getLogLevel(v string) slog.Level {
 	}
 }
 
-func convertLogLevel(v string) slog.Level {
-	switch v {
+// convertLogLevel converts a string log level to slog.Level.
+func convertLogLevel(level string) slog.Level {
+	switch level {
 	case "debug":
 		return slog.LevelDebug
 	case "info":

@@ -1,6 +1,6 @@
-x-common-db-env: &common-db-env
-  APP_ENV: ${APP_ENV}
-  APP_NAME: "Travel API"
+x-common-env: &common-env
+  APP_ENV: "development"
+  APP_NAME: "travel-api"
   SERVER_PORT: ${SERVER_PORT}
   DB_HOST: postgres
   DB_PORT: 5432
@@ -13,11 +13,15 @@ x-common-db-env: &common-db-env
   DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-50}
   DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-1h}
   DB_LOG_LEVEL: ${DB_LOG_LEVEL}
+  TRACING_ENABLED: ${TRACING_ENABLED}
+  TRACING_EXPORTER: ${TRACING_EXPORTER}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+  OTEL_EXPORTER_OTLP_INSECURE: ${OTEL_EXPORTER_OTLP_INSECURE}
+  OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS}
 
 services:
   postgres:
     image: docker.io/library/postgres:15-alpine
-    container_name: postgres
     restart: always
     environment:
       POSTGRES_USER: ${DB_USERNAME}
@@ -33,21 +37,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - travel_local_network
 
-  travel-migrator:
+  migrator:
     image: localhost/travel-api-migrator
-    container_name: travel-migrator
     build:
       context: .
       dockerfile: Dockerfile
       target: migrator
     restart: no
     environment:
-      <<: *common-db-env
-    networks:
-      - travel_local_network
+      <<: *common-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,28 +54,22 @@ services:
         restart: false
     command: ["up"]
 
-  travel-api:
+  api:
     image: localhost/travel-api-server
-    container_name: travel-api
     build:
       context: .
       dockerfile: Dockerfile
       target: server
     restart: always
     environment:
-      <<: *common-db-env
+      <<: *common-env
     depends_on:
-      travel-migrator:
+      migrator:
         condition: service_completed_successfully
         required: true
         restart: false
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
-    networks:
-      - travel_local_network
 
 volumes:
   postgres-volume:
-
-networks:
-  travel_local_network:

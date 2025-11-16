@@ -1,13 +1,13 @@
-# Abaikan file .git dan dependensi lokal
+# Ignore Git metadata and local dependencies
 .git
 .gitignore
 vendor/
 node_modules/
 
-# Abaikan output build lokal
+# Ignore local build artifacts and temporary files
 build/
 tmp/
 
-# Abaikan file konfigurasi lokal
+# Ignore local configuration and documentation
 .env
 *.md

@@ -7,14 +7,17 @@ import (
 )
 
 // ==========================================================
-// REQUEST DTOs (Data Masuk dari Klien)
+// Request DTOs
 // ==========================================================
 
+// ProductGetAllRequest defines the query parameters for retrieving a list of products.
+// It combines common pagination/sorting parameters with specific product filters.
 type ProductGetAllRequest struct {
 	*CommonGetAllRequest
 	*model.ProductFilter
 }
 
+// ProductCreateRequest defines the payload required to create a new product.
 type ProductCreateRequest struct {
 	Name        string  `json:"name" validate:"required,max=255"`
 	Description *string `json:"description,omitempty"`
@@ -22,6 +25,8 @@ type ProductCreateRequest struct {
 	IsActive    *bool   `json:"is_active,omitempty" validate:"omitempty"`
 }
 
+// ProductUpdateRequest defines the payload for updating an existing product.
+// All fields are optional to allow partial updates.
 type ProductUpdateRequest struct {
 	Name        *string `json:"name,omitempty" validate:"omitempty,max=255"`
 	Description *string `json:"description,omitempty"`
@@ -30,9 +35,10 @@ type ProductUpdateRequest struct {
 }
 
 // ==========================================================
-// RESPONSE DTO (Data Keluar ke Klien)
+// Response DTOs
 // ==========================================================
 
+// ProductBaseResponse defines the standard response structure for product data.
 type ProductBaseResponse struct {
 	ID          uint      `json:"id"`
 	UID         string    `json:"uid"`

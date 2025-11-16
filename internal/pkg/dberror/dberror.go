@@ -6,21 +6,21 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Daftar SQLSTATE yang umum ditangani di aplikasi.
-// Referensi: https://www.postgresql.org/docs/current/errcodes-appendix.html
+// Common SQLSTATE codes handled by the application.
+// Reference: https://www.postgresql.org/docs/current/errcodes-appendix.html
 const (
 	// Class 23 — Integrity Constraint Violation
-	UniqueViolation     string = "23505"
-	ForeignKeyViolation string = "23503"
-	NotNullViolation    string = "23502"
-	CheckViolation      string = "23514"
+	UniqueViolation     = "23505"
+	ForeignKeyViolation = "23503"
+	NotNullViolation    = "23502"
+	CheckViolation      = "23514"
 
 	// Class 08 — Connection Exception
-	ConnectionException string = "08000"
+	ConnectionException = "08000"
 )
 
-// GetError mel-ekstrak *pgconn.PgError dari sebuah error.
-// Mengembalikan nil jika error tersebut bukan PgError.
+// GetError extracts *pgconn.PgError from an error chain.
+// Returns nil if the error does not contain a PgError.
 func GetError(err error) *pgconn.PgError {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
@@ -29,8 +29,8 @@ func GetError(err error) *pgconn.PgError {
 	return nil
 }
 
-// GetSQLState mel-ekstrak SQLState code dari sebuah error.
-// Mengembalikan string kosong jika error tersebut bukan PgError.
+// GetSQLState extracts the SQLState code from an error.
+// Returns an empty string if the error is not a PgError.
 func GetSQLState(err error) string {
 	if pgErr := GetError(err); pgErr != nil {
 		return pgErr.Code

@@ -25,13 +25,14 @@ type service struct {
 	mapper contract.Mapper
 }
 
-// NewService membuat instance baru dari product service
+// NewService initializes a new instance of product service.
 func NewService(uow contract.UnitOfWork, mapper contract.Mapper) contract.ProductService {
 	return &service{uow: uow, mapper: mapper}
 }
 
+// CreateProduct handles the creation of a new product record.
 func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
-	ctx, span := serviceTracer.Start(ctx, "CreateUser")
+	ctx, span := serviceTracer.Start(ctx, "CreateProduct")
 	defer span.End()
 
 	product := &model.Product{}
@@ -45,6 +46,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 		return nil, err
 	}
 
+	// TODO: Retrieve actor from context in production
 	actor := struct {
 		ID   uint   `json:"id"`
 		Name string `json:"name"`
@@ -52,8 +54,6 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 
 	actorJSON, _ := json.Marshal(actor)
 	product.CreatedBy = actorJSON
-
-	// Add required business logic here
 
 	var created *model.Product
 	err = s.uow.Execute(ctx, func(uowCtx context.Context, uow contract.UnitOfWork) error {
@@ -84,6 +84,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	return res, nil
 }
 
+// GetAllProducts retrieves a list of products with support for pagination and filtering.
 func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllRequest) ([]payload.ProductBaseResponse, *response.Pagination, error) {
 	ctx, span := serviceTracer.Start(ctx, "GetAllProducts")
 	defer span.End()
@@ -91,6 +92,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	var count int64
 	var products []model.Product
 
+	// Use errgroup for concurrent data fetching (count and data)
 	group, groupCtx := errgroup.WithContext(ctx)
 
 	group.Go(func() error {
@@ -99,7 +101,6 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 		if err != nil {
 			return err
 		}
-
 		return nil
 	})
 
@@ -109,7 +110,6 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 		if err != nil {
 			return err
 		}
-
 		return nil
 	})
 
@@ -127,6 +127,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	return res, response.NewPagination(req.Page, req.Size, &count), nil
 }
 
+// GetProductByID retrieves a specific product by its unique identifier.
 func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.ProductBaseResponse, error) {
 	ctx, span := serviceTracer.Start(ctx, "GetProductByID")
 	defer span.End()
@@ -136,7 +137,6 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.New(apperror.ProductNotFound, "product not found", err, nil)
 		}
-
 		return nil, err
 	}
 
@@ -149,6 +149,7 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	return res, nil
 }
 
+// UpdateProduct modifies an existing product's information.
 func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.ProductUpdateRequest) (*payload.ProductBaseResponse, error) {
 	ctx, span := serviceTracer.Start(ctx, "UpdateProduct")
 	defer span.End()
@@ -162,8 +163,6 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	if err != nil {
 		return nil, err
 	}
-
-	// Add required business logic here
 
 	updated, err := s.uow.Product().Update(ctx, product)
 	if err != nil {
@@ -179,6 +178,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	return res, nil
 }
 
+// DeleteProduct removes a product record from the database.
 func (s *service) DeleteProduct(ctx context.Context, id uint) error {
 	ctx, span := serviceTracer.Start(ctx, "DeleteProduct")
 	defer span.End()

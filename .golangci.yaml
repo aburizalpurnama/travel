@@ -1,10 +1,10 @@
 version: "2"
 
 linters:
-  # non-aktifkan semua linters default, lalu aktifkan hanya yang Anda pilih
+  # Disable all default linters, then enable only the ones explicitly listed below.
   default: none
 
-  # linters yang Anda pakai sebelumnya (tanpa gofmt/goimports karena sekarang di `formatters`)
+  # Enabled linters (formatters like gofmt/goimports are now in the 'formatters' section).
   enable:
     - errcheck
     - govet
@@ -12,29 +12,28 @@ linters:
     - unused
     - bodyclose
     - ineffassign
-    # gosimple biasanya redundant dengan staticcheck di banyak kasus,
-    # hapus atau tambahkan kembali jika Anda memang mau memakainya:
+    # gosimple is often redundant with staticcheck. Uncomment if specifically needed:
     # - gosimple
 
-  # path / direktori yg ingin dikecualikan dari analisis linters
+  # Paths or directories to exclude from linter analysis.
   exclusions:
     paths:
       - internal/app/database/migration
 
-  # pengaturan khusus untuk linters
+  # Specific configuration for enabled linters.
   settings:
     govet:
-      # di schema v2, untuk memeriksa shadowing gunakan 'enable: - shadow'
+      # In schema v2, use 'enable: - shadow' to check for variable shadowing.
       enable:
         - shadow
 
 formatters:
-  # format-checkers (gofmt / goimports / gofumpt / gci dll) sekarang berada di bagian ini
+  # Format checkers (gofmt, goimports, gofumpt, gci, etc.) are configured in this section.
   enable:
     - gofmt
     - goimports
 
-  # jika butuh pengaturan khusus untuk formatter, pakai formatters.settings:
+  # Specific settings for formatters (uncomment if needed):
   # settings:
   #   gofmt:
   #     simplify: false
@@ -43,6 +42,6 @@ formatters:
   #       - github.com/yourorg/yourrepo
 
 run:
-  # gunakan ini jika Anda ingin memastikan tools seperti staticcheck melihat target Go versi yang sama
+  # Target Go version for analysis tools to ensure consistency, make it same with the version in your go.mod.
   go: "1.25.1"
   timeout: 5m

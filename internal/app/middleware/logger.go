@@ -8,11 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// RequestLogger adalah middleware untuk membuat contextual logger dan mencatat ringkasan request.
+// RequestLogger initializes a middleware that injects a contextual logger into the request context
+// and logs a summary of the request execution, including status code, latency, and errors.
 func RequestLogger(logger *slog.Logger) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		start := time.Now()
 		reqID := uuid.New().String()
+
+		// Inject logger with request ID into context for downstream handlers
 		reqLogger := logger.With("request_id", reqID)
 		c.Locals("logger", reqLogger)
 
@@ -22,6 +25,7 @@ func RequestLogger(logger *slog.Logger) fiber.Handler {
 		statusCode := c.Response().StatusCode()
 		clientIP := c.IP()
 
+		// Check for explicit errors stored in context during handler execution
 		requestError := c.Locals("error")
 
 		if requestError != nil {
@@ -37,6 +41,7 @@ func RequestLogger(logger *slog.Logger) fiber.Handler {
 				)
 			}
 		} else {
+			// Log based on HTTP status severity
 			if statusCode >= 500 {
 				reqLogger.Error(
 					"Request completed with server error",
