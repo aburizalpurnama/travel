@@ -20,11 +20,12 @@ type Handler struct {
 	service contract.ProductService
 }
 
-// NewHandler membuat instance baru dari ProductHandler
+// NewHandler initializes a new instance of ProductHandler.
 func NewHandler(service contract.ProductService) *Handler {
 	return &Handler{service: service}
 }
 
+// CreateProduct handles the creation of a new product.
 func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 	ctx, span := handlerTracer.Start(c.Context(), "CreateProduct")
 	defer span.End()
@@ -43,6 +44,7 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 	if err != nil {
 		c.Locals("error", err)
 
+		// Map application errors to appropriate HTTP status codes
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
 			switch appErr.Code {
@@ -50,9 +52,6 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 				return c.Status(fiber.StatusConflict).JSON(
 					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
-
-				// handle other error codes as needed
-
 			default:
 				return c.Status(fiber.StatusInternalServerError).JSON(
 					response.Error(appErr.Code, appErr.Message, appErr.Details),
@@ -68,6 +67,7 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(response.Success(product, nil))
 }
 
+// GetProducts retrieves a list of products with pagination and filtering.
 func (h *Handler) GetProducts(c *fiber.Ctx) error {
 	ctx, span := handlerTracer.Start(c.Context(), "GetProducts")
 	defer span.End()
@@ -90,9 +90,6 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 				return c.Status(fiber.StatusConflict).JSON(
 					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
-
-				// handle other error codes as needed
-
 			default:
 				return c.Status(fiber.StatusInternalServerError).JSON(
 					response.Error(appErr.Code, appErr.Message, appErr.Details),
@@ -108,6 +105,7 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 	return c.JSON(response.Success(products, pagination))
 }
 
+// GetProduct retrieves a single product by its ID.
 func (h *Handler) GetProduct(c *fiber.Ctx) error {
 	ctx, span := handlerTracer.Start(c.Context(), "GetProduct")
 	defer span.End()
@@ -130,8 +128,6 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 				return c.Status(fiber.StatusNotFound).JSON(
 					response.Error(appErr.Code, appErr.Message, appErr.Details),
 				)
-
-				// handle other error codes as needed
 			default:
 				return c.Status(fiber.StatusInternalServerError).JSON(
 					response.Error(apperror.Internal, apperror.ERR_INTERNAL_MSG, nil),
@@ -147,6 +143,7 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 	return c.JSON(response.Success(product, nil))
 }
 
+// UpdateProduct modifies an existing product based on ID and payload.
 func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 	ctx, span := handlerTracer.Start(c.Context(), "UpdateProduct")
 	defer span.End()
@@ -157,14 +154,12 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 	}
 
 	var req payload.ProductUpdateRequest
-	err = c.BodyParser(&req)
-	if err != nil {
+	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.JSONParserError(err))
 	}
 
 	validate := validator.New()
-	err = validate.Struct(req)
-	if err != nil {
+	if err := validate.Struct(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationError(err))
 	}
 
@@ -180,6 +175,7 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 	return c.JSON(response.Success(product, nil))
 }
 
+// DeleteProduct removes a product by its ID.
 func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
 	ctx, span := handlerTracer.Start(c.Context(), "DeleteProduct")
 	defer span.End()
@@ -189,8 +185,7 @@ func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid ID"})
 	}
 
-	err = h.service.DeleteProduct(ctx, uint(id))
-	if err != nil {
+	if err := h.service.DeleteProduct(ctx, uint(id)); err != nil {
 		c.Locals("error", err)
 
 		return c.Status(fiber.StatusInternalServerError).JSON(

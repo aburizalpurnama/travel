@@ -7,37 +7,25 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// Pre-compile regex untuk efisiensi.
-// Regex ini akan menangkap:
-// Grup 1: Daftar kolom (e.g., "name, is_active")
-// Grup 2: Daftar nilai (e.g., "dolor, t")
+// uniqueDetailRegex captures the column names and values from a PostgreSQL unique violation detail string.
+// Example Detail: "Key (email, username)=(test@example.com, user1) already exists."
+// Group 1 captures: "email, username"
+// Group 2 captures: "test@example.com, user1"
 var uniqueDetailRegex = regexp.MustCompile(`^Key \((.*?)\)=\((.*?)\) already exists\.$`)
 
-// convertPsqlValue adalah helper kecil untuk mengubah nilai string 't'/'f' dari Postgres
-func convertPsqlValue(val string) any {
-	if val == "t" {
-		return true
-	}
-	if val == "f" {
-		return false
-	}
-	// Di sini Anda bisa menambahkan konversi lain jika perlu (misal: string angka ke int)
-	return val
-}
-
-// ParseUniqueConstraintError mengekstrak detail dari pgErr 23505.
-// Ia mengembalikan pesan error yang ramah dan map[string]interface{} dari field yang duplikat.
+// ParseUniqueConstraintError extracts details from a UniqueViolation (23505) error.
+// It returns a user-friendly error message and a map of the conflicting fields and their values.
 func ParseUniqueConstraintError(pgErr *pgconn.PgError) (string, map[string]any) {
-	// Fallback message default
 	defaultMessage := "An entry with this data already exists."
 
 	if pgErr.Code != UniqueViolation || pgErr.Detail == "" {
 		return defaultMessage, nil
 	}
 
+	// Attempt to parse the detail string using regex
 	matches := uniqueDetailRegex.FindStringSubmatch(pgErr.Detail)
 	if len(matches) != 3 {
-		// Gagal mem-parsing, kembalikan pesan generik berdasarkan nama constraint
+		// If parsing fails, return a generic message with the constraint name
 		return "Data already exists: " + pgErr.ConstraintName, nil
 	}
 
@@ -45,7 +33,6 @@ func ParseUniqueConstraintError(pgErr *pgconn.PgError) (string, map[string]any) 
 	values := strings.Split(matches[2], ", ")
 
 	if len(keys) != len(values) {
-		// Seharusnya tidak terjadi, tapi untuk jaga-jaga
 		return defaultMessage, nil
 	}
 
@@ -54,8 +41,21 @@ func ParseUniqueConstraintError(pgErr *pgconn.PgError) (string, map[string]any) 
 		details[key] = convertPsqlValue(values[i])
 	}
 
-	// Buat pesan error yang lebih spesifik
+	// Construct a readable error message listing the conflicting fields
 	msg := "An entry with this " + strings.Join(keys, " and ") + " already exists."
 
 	return msg, details
+}
+
+// convertPsqlValue is a helper to convert PostgreSQL specific string representations (like 't'/'f')
+// into their native Go types.
+func convertPsqlValue(val string) any {
+	switch val {
+	case "t":
+		return true
+	case "f":
+		return false
+	}
+	// Additional conversions (e.g., numbers) can be added here if needed.
+	return val
 }

@@ -12,6 +12,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
+// Option holds the configuration parameters for initializing OpenTelemetry tracing.
 type Option struct {
 	Enabled      bool
 	ServiceName  string
@@ -22,40 +23,36 @@ type Option struct {
 	OtlpHeaders  string
 }
 
-// InitTracerProvider menginisialisasi provider OTel dan mendaftarkannya secara global.
-// Ia mengembalikan fungsi shutdown yang harus dipanggil saat aplikasi berhenti.
+// InitTracerProvider initializes the OpenTelemetry tracer provider and registers it globally.
+// It returns a shutdown function that must be called when the application terminates to flush pending spans.
 func InitTracerProvider(opt Option) (func(context.Context) error, error) {
-	// 1. Cek apakah tracing diaktifkan
 	if !opt.Enabled {
 		slog.Info("Tracing is DISABLED (No-op provider).")
-		// Kembalikan fungsi shutdown "no-op" (kosong)
+		// Return a no-op shutdown function
 		return func(context.Context) error { return nil }, nil
 	}
 
 	slog.Info("Tracing is ENABLED", "exporter", opt.Exporter)
 
-	// 2. Buat exporter yang dikonfigurasi menggunakan factory
+	// Create an exporter configured via the internal factory
 	exporter, err := newExporter(context.Background(), opt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exporter: %w", err)
 	}
 
-	// 3. Buat Resource (metadata tentang aplikasi Anda)
+	// Create a Resource (metadata about your application)
 	res := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.ServiceName(opt.ServiceName),
 		attribute.String("environment", opt.Environment),
 	)
 
-	// 4. Buat Tracer Provider
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(res),
 	)
 
-	// 5. Set sebagai Global Provider
 	otel.SetTracerProvider(tp)
 
-	// 6. Kembalikan fungsi shutdown yang sebenarnya
 	return tp.Shutdown, nil
 }

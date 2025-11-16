@@ -101,7 +101,7 @@ const (
 	IsRequired Code = "IS_REQUIRED"
 
 	// INVALID_TYPE
-	// The field's type is incorrect
+	// The field's type is incorrect.
 	InvalidType Code = "INVALID_TYPE"
 
 	// INVALID_FORMAT

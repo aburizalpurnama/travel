@@ -9,12 +9,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Config holds all the application configuration values loaded from environment variables.
 type Config struct {
+	// Application Settings
 	AppEnv      string `env:"APP_ENV"       envDefault:"development"`
-	AppName     string `env:"APP_NAME"      envDefault:"travel-api"` // TODO: default value ganti dengan nama app pada builder
+	AppName     string `env:"APP_NAME"      envDefault:"travel-api"` // TODO: Replace default value with the actual app name during build
 	AppLogLevel string `env:"APP_LOG_LEVEL"`
 	ServerPort  int    `env:"SERVER_PORT"   envDefault:"3000"`
 
+	// Database Configuration
 	DBHost            string        `env:"DB_HOST,required"`
 	DBPort            int           `env:"DB_PORT,required"`
 	DBUsername        string        `env:"DB_USERNAME,required"`
@@ -27,41 +30,46 @@ type Config struct {
 	DBConnMaxLifetime time.Duration `env:"DB_CONN_MAX_LIFETIME" envDefault:"1h"`
 	DBLogLevel        string        `env:"DB_LOG_LEVEL"`
 
+	// Redis Configuration
 	RedisHost     string `env:"REDIS_HOST"`
 	RedisPort     int    `env:"REDIS_PORT"`
 	RedisPassword string `env:"REDIS_PASSWORD"`
 	RedisDB       int    `env:"REDIS_DB"       envDefault:"0"`
 
+	// Security Configuration
 	JwtSecret            string `env:"JWT_SECRET"`
 	JwtExpirationMinutes int    `env:"JWT_EXPIRATION_MINUTES" envDefault:"60"`
+	CORSAllowedOrigins   string `env:"CORS_ALLOWED_ORIGINS"   envDefault:"http://localhost:5173,http://localhost:3000"`
 
-	CORSAllowedOrigins string `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:5173,http://localhost:3000"`
-
+	// Email Service Configuration (Mailgun)
 	MailgunApiKey   string `env:"MAILGUN_API_KEY"`
 	MailgunDomain   string `env:"MAILGUN_DOMAIN"`
 	MailSenderEmail string `env:"MAILGUN_SENDER_EMAIL"`
 
+	// OpenTelemetry Tracing Configuration
 	Tracing struct {
-		Enabled  bool   `env:"TRACING_ENABLED" envDefault:"false"`
-		Exporter string `env:"TRACING_EXPORTER" envDefault:"stdout"` // "stdout" or "otlp"
+		Enabled  bool   `env:"TRACING_ENABLED"  envDefault:"false"`
+		Exporter string `env:"TRACING_EXPORTER" envDefault:"stdout"` // Options: "stdout", "otlp"
 
 		// OTLP General Config
 		OtlpEndpoint string `env:"OTEL_EXPORTER_OTLP_ENDPOINT" envDefault:"localhost:4317"`
 		OtlpInsecure bool   `env:"OTEL_EXPORTER_OTLP_INSECURE" envDefault:"true"`
 
-		// (Opsional) Vendor-specific headers
-		OtlpHeaders string `env:"OTEL_EXPORTER_OTLP_HEADERS"` // e.g., "Authentication=Bearer <key>,Datadog-Meta-Tracer-Version=v1"
+		// Optional Vendor-specific headers (e.g., "Authentication=Bearer <key>,...")
+		OtlpHeaders string `env:"OTEL_EXPORTER_OTLP_HEADERS"`
 	}
 }
 
+// LoadConfig reads configuration from .env files and environment variables.
+// It prioritizes existing environment variables over .env file values.
 func LoadConfig() (*Config, error) {
 	appEnv := os.Getenv("APP_ENV")
 
+	// Load .env file only in development or if APP_ENV is not set
 	if appEnv == "development" || appEnv == "" {
 		err := godotenv.Load()
 		if err != nil && !os.IsNotExist(err) {
-			// Beri peringatan jika ada error lain (misal: format .env salah),
-			// tapi abaikan jika error-nya hanya "file tidak ditemukan".
+			// Warn on errors other than "file not found" (e.g., invalid .env format)
 			log.Printf("Warning: Non-critical error loading .env file: %v", err)
 		}
 	}

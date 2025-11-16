@@ -1,5 +1,6 @@
 package payload
 
+// CommonGetAllRequest defines standard pagination and sorting parameters for list retrieval endpoints.
 type CommonGetAllRequest struct {
 	Page      *int    `query:"page"`
 	Size      *int    `query:"size"`
@@ -7,6 +8,8 @@ type CommonGetAllRequest struct {
 	OrderType *string `query:"order_type"`
 }
 
+// SetDefault applies default values for pagination and sorting if they are not provided.
+// Defaults: Page=1, Size=10, OrderBy="id", OrderType="desc".
 func (req *CommonGetAllRequest) SetDefault() {
 	if req.Page == nil {
 		page := 1

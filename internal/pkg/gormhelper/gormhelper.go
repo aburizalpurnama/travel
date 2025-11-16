@@ -4,14 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-
 	stdStrings "strings"
 
 	"github.com/aburizalpurnama/travel/internal/pkg/strings"
 	"gorm.io/gorm"
 )
 
-// ParseFilter secara dinamis menambahkan klausa WHERE ke query GORM dari sebuah struct filter.
+// ParseFilter dynamically adds WHERE clauses to a GORM query based on a filter struct.
+// It inspects the struct fields and their tags to construct the query.
 func ParseFilter(db *gorm.DB, filter any) (*gorm.DB, error) {
 	if db == nil {
 		return nil, errors.New("gormhelper error: db cannot be nil")
@@ -34,14 +34,16 @@ func ParseFilter(db *gorm.DB, filter any) (*gorm.DB, error) {
 		field := typ.Field(i)
 		value := val.Field(i)
 
-		// Hanya proses field yang bertipe pointer dan nilainya tidak nil
+		// Only process pointer fields that are not nil
 		if value.Kind() == reflect.Pointer && !value.IsNil() {
 
 			var columnName string
 			queryTag := field.Tag.Get("query")
 
-			// Ignore field dengan tag `query:"-"`.
-			// Ignorance ini dapat dimanfaatkan untuk filter yang nama attributnya tidak sama dengan nama kolom pada database, misal filter untuk mendapatkan data dengan rentang created_on tertentu menggunakan start_date dan end_date. User perlu melakukan penyesuaian query secara manual di bagian repository untuk case tsb.
+			// Ignore fields with tag `query:"-"`.
+			// This is useful for filters where the attribute name does not match the database column name directly,
+			// e.g., filtering data within a date range using start_date and end_date.
+			// The user must handle the query customization manually in the repository for such cases.
 			if queryTag == "-" {
 				continue
 			}
@@ -56,7 +58,7 @@ func ParseFilter(db *gorm.DB, filter any) (*gorm.DB, error) {
 
 			actualValue := value.Elem().Interface()
 
-			// Kondisi khusus untuk 'search'
+			// Special handling for 'search' field
 			if columnName == "search" {
 				var searchableFields []string
 				searchTag := field.Tag.Get("search")
@@ -69,19 +71,19 @@ func ParseFilter(db *gorm.DB, filter any) (*gorm.DB, error) {
 					var orClauses []string
 					var orArgs []any
 
-					// Buat klausa OR untuk setiap field yang bisa dicari
+					// Create OR clauses for each searchable field
 					for _, searchableField := range searchableFields {
 						orClauses = append(orClauses, fmt.Sprintf("%s ILIKE ?", searchableField))
 						orArgs = append(orArgs, "%"+searchTerm+"%")
 					}
 
-					// Gabungkan semua klausa dengan " OR "
+					// Combine all clauses with " OR "
 					queryString := stdStrings.Join(orClauses, " OR ")
 					db = db.Where(queryString, orArgs...)
 				}
 
 			} else {
-				// Untuk filter biasa, gunakan query equality (=)
+				// For standard filters, use equality query (=)
 				db = db.Where(fmt.Sprintf("%s = ?", columnName), actualValue)
 			}
 		}

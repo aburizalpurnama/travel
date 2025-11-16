@@ -12,29 +12,30 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// newExporter adalah factory internal yang memilih exporter berdasarkan config.
+// newExporter is an internal factory that creates and configures a trace exporter based on the provided options.
 func newExporter(ctx context.Context, opt Option) (sdktrace.SpanExporter, error) {
 	switch opt.Exporter {
 	case "stdout":
 		return stdouttrace.New(stdouttrace.WithPrettyPrint())
 
 	case "otlp":
-		// Ini adalah exporter universal untuk vendor seperti Datadog, Grafana, Sentry, dll.
+		// OTLP is the universal exporter standard supported by vendors like Datadog, Grafana, Sentry, etc.
 		opts := []otlptracegrpc.Option{
 			otlptracegrpc.WithEndpoint(opt.OtlpEndpoint),
 		}
 
-		// Atur koneksi aman (TLS) atau tidak aman (insecure)
+		// Configure secure (TLS) or insecure connection
 		if opt.OtlpInsecure {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		} else {
 			opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, "")))
 		}
 
-		// (Opsional) Tambahkan headers kustom untuk autentikasi vendor
+		// (Optional) Add custom headers for vendor authentication or metadata
 		if opt.OtlpHeaders != "" {
 			headers := make(map[string]string)
-			for header := range strings.SplitSeq(opt.OtlpHeaders, ",") {
+			// Parse comma-separated headers (e.g., "key1=value1,key2=value2")
+			for _, header := range strings.Split(opt.OtlpHeaders, ",") {
 				parts := strings.SplitN(header, "=", 2)
 				if len(parts) == 2 {
 					headers[parts[0]] = parts[1]

@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// APIResponse represents the standard JSON response structure for the API.
 type APIResponse struct {
 	Status     string      `json:"status"`
 	Data       any         `json:"data,omitempty"`
@@ -17,12 +18,14 @@ type APIResponse struct {
 	Pagination *Pagination `json:"pagination,omitempty"`
 }
 
+// APIError represents the structure of error details in the response.
 type APIError struct {
 	Code    apperror.Code `json:"code"`
 	Message string        `json:"message"`
 	Details any           `json:"details,omitempty"`
 }
 
+// Pagination holds pagination metadata.
 type Pagination struct {
 	TotalItems  *int64 `json:"total_items,omitempty"`
 	TotalPages  *int   `json:"total_pages,omitempty"`
@@ -30,6 +33,7 @@ type Pagination struct {
 	PageSize    *int   `json:"page_size,omitempty"`
 }
 
+// NewPagination creates a new Pagination instance based on page size and total count.
 func NewPagination(page, size *int, count *int64) *Pagination {
 	if page == nil || size == nil || count == nil {
 		return nil
@@ -48,6 +52,7 @@ func NewPagination(page, size *int, count *int64) *Pagination {
 	}
 }
 
+// Success creates a success APIResponse with data and optional pagination.
 func Success(data any, pagination *Pagination) APIResponse {
 	return APIResponse{
 		Status:     "success",
@@ -56,6 +61,7 @@ func Success(data any, pagination *Pagination) APIResponse {
 	}
 }
 
+// Error creates an error APIResponse with a code, message, and optional details.
 func Error(code apperror.Code, message string, details any) APIResponse {
 	return APIResponse{
 		Status: "error",
@@ -67,6 +73,7 @@ func Error(code apperror.Code, message string, details any) APIResponse {
 	}
 }
 
+// JSONParserError converts JSON unmarshalling errors into a standardized APIResponse.
 func JSONParserError(err error) APIResponse {
 	var unmarshalErr *json.UnmarshalTypeError
 	var syntaxErr *json.SyntaxError
@@ -101,6 +108,8 @@ func JSONParserError(err error) APIResponse {
 	}
 }
 
+// ValidationError converts go-playground/validator errors into a standardized APIResponse.
+// It maps validator tags to custom apperror codes.
 func ValidationError(err error) APIResponse {
 	formattedErrors := make(map[string]apperror.Code)
 
@@ -108,7 +117,7 @@ func ValidationError(err error) APIResponse {
 		for _, fe := range validationErrs {
 			field := appstrings.ToSnakeCase(fe.Field())
 
-			// Petakan 'tag' validasi ke 'apperror.Code' kustom Anda
+			// Map validator tags to custom apperror codes
 			switch fe.Tag() {
 			case "required":
 				formattedErrors[field] = apperror.IsRequired
