@@ -11,7 +11,7 @@ import (
 
 type Config struct {
 	AppEnv      string `env:"APP_ENV"       envDefault:"development"`
-	AppName     string `env:"APP_NAME"      envDefault:"TravelQu API"` // TODO: default value ganti dengan nama app pada builder
+	AppName     string `env:"APP_NAME"      envDefault:"travel-api"` // TODO: default value ganti dengan nama app pada builder
 	AppLogLevel string `env:"APP_LOG_LEVEL"`
 	ServerPort  int    `env:"SERVER_PORT"   envDefault:"3000"`
 
@@ -40,6 +40,18 @@ type Config struct {
 	MailgunApiKey   string `env:"MAILGUN_API_KEY"`
 	MailgunDomain   string `env:"MAILGUN_DOMAIN"`
 	MailSenderEmail string `env:"MAILGUN_SENDER_EMAIL"`
+
+	Tracing struct {
+		Enabled  bool   `env:"TRACING_ENABLED" envDefault:"false"`
+		Exporter string `env:"TRACING_EXPORTER" envDefault:"stdout"` // "stdout" or "otlp"
+
+		// OTLP General Config
+		OtlpEndpoint string `env:"OTEL_EXPORTER_OTLP_ENDPOINT" envDefault:"localhost:4317"`
+		OtlpInsecure bool   `env:"OTEL_EXPORTER_OTLP_INSECURE" envDefault:"true"`
+
+		// (Opsional) Vendor-specific headers
+		OtlpHeaders string `env:"OTEL_EXPORTER_OTLP_HEADERS"` // e.g., "Authentication=Bearer <key>,Datadog-Meta-Tracer-Version=v1"
+	}
 }
 
 func LoadConfig() (*Config, error) {
