@@ -22,7 +22,6 @@ x-common-env: &common-env
 services:
   postgres:
     image: docker.io/library/postgres:15-alpine
-    container_name: postgres
     restart: always
     environment:
       POSTGRES_USER: ${DB_USERNAME}
@@ -38,12 +37,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - travel_local_network
 
-  travel-migrator:
+  migrator:
     image: localhost/travel-api-migrator
-    container_name: travel-migrator
     build:
       context: .
       dockerfile: Dockerfile
@@ -51,8 +47,6 @@ services:
     restart: no
     environment:
       <<: *common-env
-    networks:
-      - travel_local_network
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,9 +54,8 @@ services:
         restart: false
     command: ["up"]
 
-  travel-api:
+  api:
     image: localhost/travel-api-server
-    container_name: travel-api
     build:
       context: .
       dockerfile: Dockerfile
@@ -71,17 +64,12 @@ services:
     environment:
       <<: *common-env
     depends_on:
-      travel-migrator:
+      migrator:
         condition: service_completed_successfully
         required: true
         restart: false
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
-    networks:
-      - travel_local_network
 
 volumes:
   postgres-volume:
-
-networks:
-  travel_local_network:
