@@ -27,6 +27,9 @@ func NewGormUnitOfWork(db *gorm.DB) contract.UnitOfWork {
 	return &gormUnitOfWork{db: db}
 }
 
+// Ensures gormUnitOfWork satisfies the contract at compile-time.
+var _ contract.UnitOfWork = (*gormUnitOfWork)(nil)
+
 // Product provides a lazy-loaded transactional ProductRepository.
 func (u *gormUnitOfWork) Product() contract.ProductRepository {
 	if u.productRepo == nil {
