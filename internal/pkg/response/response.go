@@ -108,6 +108,20 @@ func JSONParserError(err error) APIResponse {
 	}
 }
 
+// QueryParserError converts query parsing errors into a standardized APIResponse.
+func QueryParserError(err error) APIResponse {
+	return APIResponse{
+		Status: "error",
+		Error: &APIError{
+			Code:    apperror.Validation,
+			Message: "Your query parameters are invalid.",
+			Details: map[string]any{
+				"syntax": err.Error(),
+			},
+		},
+	}
+}
+
 // ValidationError converts go-playground/validator errors into a standardized APIResponse.
 // It maps validator tags to custom apperror codes.
 func ValidationError(err error) APIResponse {

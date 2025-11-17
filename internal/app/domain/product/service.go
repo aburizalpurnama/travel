@@ -26,9 +26,12 @@ type service struct {
 }
 
 // NewService initializes a new instance of product service.
-func NewService(uow contract.UnitOfWork, mapper contract.Mapper) contract.ProductService {
+func NewService(uow contract.UnitOfWork, mapper contract.Mapper) *service {
 	return &service{uow: uow, mapper: mapper}
 }
+
+// Ensures service satisfies the contract at compile-time.
+var _ contract.ProductService = (*service)(nil)
 
 // CreateProduct handles the creation of a new product record.
 func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRequest) (*payload.ProductBaseResponse, error) {
@@ -38,7 +41,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	product := &model.Product{}
 	err := s.mapper.ToModel(&req, product)
 	if err != nil {
-		return nil, apperror.New(apperror.Internal, "failed to map request", err, nil)
+		return nil, apperror.ErrMapping(err)
 	}
 
 	product.Price, err = decimal.NewFromString(req.Price)
@@ -73,12 +76,13 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 			}
 		}
 
-		return nil, apperror.New(apperror.Internal, "failed to create product", err, nil)
+		return nil, ErrFailedCreateProduct(err)
 	}
 
 	res := &payload.ProductBaseResponse{}
-	if err := s.mapper.ToResponse(created, res); err != nil {
-		return nil, apperror.New(apperror.Internal, "failed to map response", err, nil)
+	err = s.mapper.ToResponse(created, res)
+	if err != nil {
+		return nil, apperror.ErrMapping(err)
 	}
 
 	return res, nil
@@ -121,7 +125,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	var res []payload.ProductBaseResponse
 	err = s.mapper.ToResponse(&products, &res)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, apperror.ErrMapping(err)
 	}
 
 	return res, response.NewPagination(req.Page, req.Size, &count), nil
@@ -135,15 +139,16 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.New(apperror.ProductNotFound, "product not found", err, nil)
+			return nil, ErrProductNotFound(err)
 		}
+
 		return nil, err
 	}
 
 	res := &payload.ProductBaseResponse{}
 	err = s.mapper.ToResponse(&product, &res)
 	if err != nil {
-		return nil, err
+		return nil, apperror.ErrMapping(err)
 	}
 
 	return res, nil
@@ -156,12 +161,16 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 
 	product, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrProductNotFound(err)
+		}
+
 		return nil, err
 	}
 
 	err = s.mapper.ToModel(&req, &product)
 	if err != nil {
-		return nil, err
+		return nil, apperror.ErrMapping(err)
 	}
 
 	updated, err := s.uow.Product().Update(ctx, product)
@@ -172,7 +181,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	res := &payload.ProductBaseResponse{}
 	err = s.mapper.ToResponse(&updated, &res)
 	if err != nil {
-		return nil, err
+		return nil, apperror.ErrMapping(err)
 	}
 
 	return res, nil
@@ -185,6 +194,10 @@ func (s *service) DeleteProduct(ctx context.Context, id uint) error {
 
 	_, err := s.uow.Product().FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrProductNotFound(err)
+		}
+
 		return err
 	}
 
