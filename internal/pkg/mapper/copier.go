@@ -15,7 +15,7 @@ func NewCopierMapper() contract.Mapper {
 	return &copierMapper{}
 }
 
-// Ensures copierMapper satisfies the contract at compile-time.
+// Ensures implementation satisfies the contract at compile-time.
 var _ contract.Mapper = (*copierMapper)(nil)
 
 // ToModel maps a Request DTO to a Domain Model, ignoring nil fields from the DTO.

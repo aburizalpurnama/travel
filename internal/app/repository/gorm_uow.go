@@ -27,21 +27,21 @@ func NewGormUnitOfWork(db *gorm.DB) contract.UnitOfWork {
 	return &gormUnitOfWork{db: db}
 }
 
-// Ensures gormUnitOfWork satisfies the contract at compile-time.
+// Ensures implementation satisfies the contract at compile-time.
 var _ contract.UnitOfWork = (*gormUnitOfWork)(nil)
 
-// Product provides a lazy-loaded transactional ProductRepository.
-func (u *gormUnitOfWork) Product() contract.ProductRepository {
+// ProductRepository provides a lazy-loaded transactional ProductRepository.
+func (u *gormUnitOfWork) ProductRepository() contract.ProductRepository {
 	if u.productRepo == nil {
 		u.productRepo = product.NewRepository(u.db)
 	}
 	return u.productRepo
 }
 
-// Execute runs the given function 'fn' within a single GORM transaction.
+// RunInTransaction runs the given function 'fn' within a single GORM transaction.
 // If 'fn' returns an error, GORM automatically performs a rollback.
 // If 'fn' succeeds, GORM automatically performs a commit.
-func (u *gormUnitOfWork) Execute(ctx context.Context, fn func(context.Context, contract.UnitOfWork) error) error {
+func (u *gormUnitOfWork) RunInTransaction(ctx context.Context, fn func(context.Context, contract.UnitOfWork) error) error {
 	ctx, span := tracer.Start(ctx, "Execute") // Span untuk seluruh transaksi
 	defer span.End()
 
