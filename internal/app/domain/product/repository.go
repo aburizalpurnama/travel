@@ -27,7 +27,7 @@ func NewRepository(db *gorm.DB) *Repository {
 	}
 }
 
-// Ensures Repository satisfies the contract at compile-time.
+// Ensures implementaton satisfies the contract at compile-time.
 var _ contract.ProductRepository = (*Repository)(nil)
 
 // Add your custom repository methods below

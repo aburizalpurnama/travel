@@ -30,7 +30,7 @@ func NewService(uow contract.UnitOfWork, mapper contract.Mapper) *service {
 	return &service{uow: uow, mapper: mapper}
 }
 
-// Ensures service satisfies the contract at compile-time.
+// Ensures implementaton satisfies the contract at compile-time.
 var _ contract.ProductService = (*service)(nil)
 
 // CreateProduct handles the creation of a new product record.
@@ -38,8 +38,8 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	ctx, span := serviceTracer.Start(ctx, "CreateProduct")
 	defer span.End()
 
-	product := &model.Product{}
-	err := s.mapper.ToModel(&req, product)
+	var product model.Product
+	err := s.mapper.ToModel(&req, &product)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
@@ -58,15 +58,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	actorJSON, _ := json.Marshal(actor)
 	product.CreatedBy = actorJSON
 
-	var created *model.Product
-	err = s.uow.Execute(ctx, func(uowCtx context.Context, uow contract.UnitOfWork) error {
-		created, err = uow.Product().Save(uowCtx, product)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
+	created, err := s.uow.ProductRepository().Save(ctx, &product)
 	if err != nil {
 		if pgErr := dberror.GetError(err); pgErr != nil {
 			switch pgErr.Code {
@@ -79,13 +71,13 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 		return nil, ErrFailedCreateProduct(err)
 	}
 
-	res := &payload.ProductBaseResponse{}
-	err = s.mapper.ToResponse(created, res)
+	var resp payload.ProductBaseResponse
+	err = s.mapper.ToResponse(&created, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
 
-	return res, nil
+	return &resp, nil
 }
 
 // GetAllProducts retrieves a list of products with support for pagination and filtering.
@@ -101,7 +93,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		count, err = s.uow.Product().Count(groupCtx, req.ProductFilter)
+		count, err = s.uow.ProductRepository().Count(groupCtx, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -110,7 +102,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 
 	group.Go(func() error {
 		var err error
-		products, err = s.uow.Product().FindAll(groupCtx, req.Page, req.Size, req.ProductFilter)
+		products, err = s.uow.ProductRepository().FindAll(groupCtx, req.Page, req.Size, req.ProductFilter)
 		if err != nil {
 			return err
 		}
@@ -122,13 +114,13 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 		return nil, nil, err
 	}
 
-	var res []payload.ProductBaseResponse
-	err = s.mapper.ToResponse(&products, &res)
+	var resp []payload.ProductBaseResponse
+	err = s.mapper.ToResponse(&products, &resp)
 	if err != nil {
 		return nil, nil, apperror.ErrMapping(err)
 	}
 
-	return res, response.NewPagination(req.Page, req.Size, &count), nil
+	return resp, response.NewPagination(req.Page, req.Size, &count), nil
 }
 
 // GetProductByID retrieves a specific product by its unique identifier.
@@ -136,7 +128,7 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	ctx, span := serviceTracer.Start(ctx, "GetProductByID")
 	defer span.End()
 
-	product, err := s.uow.Product().FindByID(ctx, id)
+	product, err := s.uow.ProductRepository().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrProductNotFound(err)
@@ -145,13 +137,13 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 		return nil, err
 	}
 
-	res := &payload.ProductBaseResponse{}
-	err = s.mapper.ToResponse(&product, &res)
+	var resp payload.ProductBaseResponse
+	err = s.mapper.ToResponse(&product, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
 
-	return res, nil
+	return &resp, nil
 }
 
 // UpdateProduct modifies an existing product's information.
@@ -159,7 +151,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	ctx, span := serviceTracer.Start(ctx, "UpdateProduct")
 	defer span.End()
 
-	product, err := s.uow.Product().FindByID(ctx, id)
+	product, err := s.uow.ProductRepository().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrProductNotFound(err)
@@ -173,18 +165,18 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 		return nil, apperror.ErrMapping(err)
 	}
 
-	updated, err := s.uow.Product().Update(ctx, product)
+	updated, err := s.uow.ProductRepository().Update(ctx, product)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &payload.ProductBaseResponse{}
-	err = s.mapper.ToResponse(&updated, &res)
+	var resp payload.ProductBaseResponse
+	err = s.mapper.ToResponse(&updated, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
 
-	return res, nil
+	return &resp, nil
 }
 
 // DeleteProduct removes a product record from the database.
@@ -192,7 +184,7 @@ func (s *service) DeleteProduct(ctx context.Context, id uint) error {
 	ctx, span := serviceTracer.Start(ctx, "DeleteProduct")
 	defer span.End()
 
-	_, err := s.uow.Product().FindByID(ctx, id)
+	_, err := s.uow.ProductRepository().FindByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrProductNotFound(err)
@@ -201,5 +193,5 @@ func (s *service) DeleteProduct(ctx context.Context, id uint) error {
 		return err
 	}
 
-	return s.uow.Product().Delete(ctx, id)
+	return s.uow.ProductRepository().Delete(ctx, id)
 }
