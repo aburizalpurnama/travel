@@ -1,6 +1,6 @@
 package contract
 
-// Mapper defines the contract for mapping between DTOs and Models.
+// Mapper defines the contract for model mapping.
 type Mapper interface {
 	// ToModel maps a Request DTO (src) to a Domain Model (dst).
 	// 'dst' must be a pointer.
