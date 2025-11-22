@@ -34,7 +34,7 @@ func NewGorm(cfg *config.Config) (*gorm.DB, error) {
 	}
 
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logLevel),
+		Logger:                 logger.Default.LogMode(logLevel),
 		SkipDefaultTransaction: true,
 	}
 
