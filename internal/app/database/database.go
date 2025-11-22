@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aburizalpurnama/travel/internal/config"
+	"github.com/jmoiron/sqlx"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -18,15 +19,7 @@ const (
 )
 
 func NewGorm(cfg *config.Config) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
-		cfg.DBHost,
-		cfg.DBUsername,
-		cfg.DBPassword,
-		cfg.DBName,
-		cfg.DBPort,
-		cfg.DBSSLMode,
-		cfg.DBTimezone,
-	)
+	dsn := getDSN(cfg)
 
 	logLevel := getLogLevel(cfg.AppEnv)
 	if cfg.DBLogLevel != "" {
@@ -53,20 +46,51 @@ func NewGorm(cfg *config.Config) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get native sql.DB: %w", err)
+	}
+
+	sqlDB.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	sqlDB.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	sqlDB.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
+
 	log.Println("✅ GORM database connection established!")
 	return db, nil
 }
 
+// NewSQLX initializes a new SQLX database connection.
+func NewSQLX(cfg *config.Config) (*sqlx.DB, error) {
+	dsn := getDSN(cfg)
+
+	// sqlx.Open initializes the DB object but doesn't establish a connection immediately.
+	// We use "pgx" as the driver name (from github.com/jackc/pgx/v5/stdlib).
+	db, err := sqlx.Open("pgx", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open sqlx connection: %w", err)
+	}
+
+	// Define the ping operation to ensure connectivity
+	op := func() error {
+		return db.Ping()
+	}
+
+	if err := retryOperation(op); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
+
+	log.Println("✅ SQLX database connection established!")
+	return db, nil
+}
+
+// NewNativeSQL initializes a new native database connection (database/sql).
 func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
-		cfg.DBHost,
-		cfg.DBUsername,
-		cfg.DBPassword,
-		cfg.DBName,
-		cfg.DBPort,
-		cfg.DBSSLMode,
-		cfg.DBTimezone,
-	)
+	dsn := getDSN(cfg)
 
 	// sql.Open only prepares the DSN; it does not connect.
 	db, err := sql.Open("pgx", dsn)
@@ -88,8 +112,30 @@ func NewNativeSQL(cfg *config.Config) (*sql.DB, error) {
 		return nil, err
 	}
 
+	db.SetMaxIdleConns(cfg.DBMaxIdleConns)
+	db.SetMaxOpenConns(cfg.DBMaxOpenConns)
+	db.SetConnMaxLifetime(cfg.DBConnMaxLifetime)
+
 	log.Println("✅ Native SQL database connection established!")
 	return db, nil
+}
+
+// getDSN constructs the Data Source Name from config.
+// It prioritizes DATABASE_URL if available.
+func getDSN(cfg *config.Config) string {
+	if cfg.DatabaseURL != "" {
+		return cfg.DatabaseURL
+	}
+
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
+		cfg.DBHost,
+		cfg.DBUsername,
+		cfg.DBPassword,
+		cfg.DBName,
+		cfg.DBPort,
+		cfg.DBSSLMode,
+		cfg.DBTimezone,
+	)
 }
 
 // retryOperation provides a generic wrapper to execute an operation with retry logic.
