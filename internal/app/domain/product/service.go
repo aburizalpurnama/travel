@@ -39,7 +39,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	defer span.End()
 
 	var product model.Product
-	err := s.mapper.ToModel(&req, &product)
+	err := s.mapper.ToModel(req, &product)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
@@ -72,7 +72,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	}
 
 	var resp payload.ProductBaseResponse
-	err = s.mapper.ToResponse(&created, &resp)
+	err = s.mapper.ToResponse(created, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
@@ -115,7 +115,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	}
 
 	var resp []payload.ProductBaseResponse
-	err = s.mapper.ToResponse(&products, &resp)
+	err = s.mapper.ToResponse(products, &resp)
 	if err != nil {
 		return nil, nil, apperror.ErrMapping(err)
 	}
@@ -138,7 +138,7 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	}
 
 	var resp payload.ProductBaseResponse
-	err = s.mapper.ToResponse(&product, &resp)
+	err = s.mapper.ToResponse(product, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
@@ -160,7 +160,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 		return nil, err
 	}
 
-	err = s.mapper.ToModel(&req, &product)
+	err = s.mapper.ToModel(req, &product)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
@@ -171,7 +171,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	}
 
 	var resp payload.ProductBaseResponse
-	err = s.mapper.ToResponse(&updated, &resp)
+	err = s.mapper.ToResponse(updated, &resp)
 	if err != nil {
 		return nil, apperror.ErrMapping(err)
 	}
