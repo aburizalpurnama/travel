@@ -80,7 +80,7 @@ func main() {
 
 // injectDependencies wires up the application dependencies (repositories, services, handlers).
 func injectDependencies(db *gorm.DB) *router.Option {
-	uow := repository.NewGormUnitOfWork(db)
+	uow := repository.NewGORMUnitOfWork(db)
 	mapper := mapper.NewCopierMapper()
 
 	productService := product.NewService(uow, mapper)

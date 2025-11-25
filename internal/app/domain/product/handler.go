@@ -8,6 +8,7 @@ import (
 	"github.com/aburizalpurnama/travel/internal/app/contract"
 	"github.com/aburizalpurnama/travel/internal/app/payload"
 	"github.com/aburizalpurnama/travel/internal/pkg/apperror"
+	"github.com/aburizalpurnama/travel/internal/pkg/httphelper"
 	"github.com/aburizalpurnama/travel/internal/pkg/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -45,21 +46,11 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 	if err != nil {
 		c.Locals("error", err)
 
-		// Map application errors to appropriate HTTP status codes
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-
-			// handle app-specific error response with the proper status code
-			switch appErr.Code {
-			case apperror.DuplicateEntry:
-				return c.Status(http.StatusConflict).JSON(
-					response.Error(appErr.Code, appErr.Message, appErr.Details),
-				)
-			default:
-				return c.Status(http.StatusInternalServerError).JSON(
-					response.Error(appErr.Code, appErr.Message, appErr.Details),
-				)
-			}
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
+				response.Error(appErr.Code, appErr.Message, appErr.Details),
+			)
 		}
 
 		return c.Status(http.StatusInternalServerError).JSON(
@@ -88,10 +79,9 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-
-			// handle app-specific error response with a proper status code
-			switch appErr.Code {
-			}
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
+				response.Error(appErr.Code, appErr.Message, appErr.Details),
+			)
 		}
 
 		return c.Status(http.StatusInternalServerError).JSON(
@@ -120,14 +110,9 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-
-			// handle app-specific error response with a proper status code
-			switch appErr.Code {
-			case apperror.ProductNotFound:
-				return c.Status(http.StatusNotFound).JSON(
-					response.Error(appErr.Code, appErr.Message, appErr.Details),
-				)
-			}
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
+				response.Error(appErr.Code, appErr.Message, appErr.Details),
+			)
 		}
 
 		return c.Status(http.StatusInternalServerError).JSON(
@@ -166,14 +151,9 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-
-			// handle app-specific error response with a proper status code
-			switch appErr.Code {
-			case apperror.ProductNotFound:
-				return c.Status(http.StatusNotFound).JSON(
-					response.Error(appErr.Code, appErr.Message, appErr.Details),
-				)
-			}
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
+				response.Error(appErr.Code, appErr.Message, appErr.Details),
+			)
 		}
 
 		return c.Status(http.StatusInternalServerError).JSON(
@@ -199,14 +179,9 @@ func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-
-			// handle app-specific error response with a proper status code
-			switch appErr.Code {
-			case apperror.ProductNotFound:
-				return c.Status(http.StatusNotFound).JSON(
-					response.Error(appErr.Code, appErr.Message, appErr.Details),
-				)
-			}
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
+				response.Error(appErr.Code, appErr.Message, appErr.Details),
+			)
 		}
 
 		return c.Status(http.StatusInternalServerError).JSON(

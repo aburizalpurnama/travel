@@ -18,11 +18,12 @@ type Config struct {
 	ServerPort  int    `env:"SERVER_PORT"   envDefault:"3000"`
 
 	// Database Configuration
-	DBHost            string        `env:"DB_HOST,required"`
-	DBPort            int           `env:"DB_PORT,required"`
-	DBUsername        string        `env:"DB_USERNAME,required"`
-	DBPassword        string        `env:"DB_PASSWORD,required"`
-	DBName            string        `env:"DB_NAME,required"`
+	DatabaseURL       string        `env:"DATABASE_URL"`
+	DBHost            string        `env:"DB_HOST" envDefault:"127.0.0.1"`
+	DBPort            int           `env:"DB_PORT" envDefault:"5432"`
+	DBUsername        string        `env:"DB_USERNAME"`
+	DBPassword        string        `env:"DB_PASSWORD"`
+	DBName            string        `env:"DB_NAME"`
 	DBSSLMode         string        `env:"DB_SSLMODE"           envDefault:"disable"`
 	DBTimezone        string        `env:"DB_TIMEZONE"          envDefault:"Asia/Jakarta"`
 	DBMaxIdleConns    int           `env:"DB_MAX_IDLE_CONNS"    envDefault:"10"`
