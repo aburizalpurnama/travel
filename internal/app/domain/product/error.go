@@ -15,33 +15,3 @@ func ErrProductNotFound(err error) *apperror.AppError {
 		nil,
 	)
 }
-
-// ErrFailedCreateProduct creates a new error for failed create product.
-func ErrFailedCreateProduct(err error) *apperror.AppError {
-	return apperror.New(
-		apperror.Internal,
-		"failed to create product",
-		err,
-		nil,
-	)
-}
-
-// ErrFailedUpdateProduct creates a new error for failures during product updates.
-func ErrFailedUpdateProduct(err error) *apperror.AppError {
-	return apperror.New(
-		apperror.Internal,
-		"failed to update product",
-		err,
-		nil,
-	)
-}
-
-// ErrFailedDeleteProduct creates a new error for failures during product deletion.
-func ErrFailedDeleteProduct(err error) *apperror.AppError {
-	return apperror.New(
-		apperror.Internal,
-		"failed to delete product",
-		err,
-		nil,
-	)
-}

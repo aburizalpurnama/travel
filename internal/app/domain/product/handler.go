@@ -48,7 +48,7 @@ func (h *Handler) CreateProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-			return c.Status(httphelper.GetHTTPStatus(appErr.Code)).JSON(
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
 				response.Error(appErr.Code, appErr.Message, appErr.Details),
 			)
 		}
@@ -79,7 +79,7 @@ func (h *Handler) GetProducts(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-			return c.Status(httphelper.GetHTTPStatus(appErr.Code)).JSON(
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
 				response.Error(appErr.Code, appErr.Message, appErr.Details),
 			)
 		}
@@ -110,7 +110,7 @@ func (h *Handler) GetProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-			return c.Status(httphelper.GetHTTPStatus(appErr.Code)).JSON(
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
 				response.Error(appErr.Code, appErr.Message, appErr.Details),
 			)
 		}
@@ -151,7 +151,7 @@ func (h *Handler) UpdateProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-			return c.Status(httphelper.GetHTTPStatus(appErr.Code)).JSON(
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
 				response.Error(appErr.Code, appErr.Message, appErr.Details),
 			)
 		}
@@ -179,7 +179,7 @@ func (h *Handler) DeleteProduct(c *fiber.Ctx) error {
 
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) {
-			return c.Status(httphelper.GetHTTPStatus(appErr.Code)).JSON(
+			return c.Status(httphelper.MapErrorToHTTPStatus(appErr.Code)).JSON(
 				response.Error(appErr.Code, appErr.Message, appErr.Details),
 			)
 		}

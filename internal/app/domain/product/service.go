@@ -41,7 +41,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 	var product model.Product
 	err := s.mapper.ToModel(req, &product)
 	if err != nil {
-		return nil, apperror.ErrMapping(err)
+		return nil, err
 	}
 
 	product.Price, err = decimal.NewFromString(req.Price)
@@ -60,6 +60,7 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 
 	created, err := s.uow.ProductRepository().Save(ctx, &product)
 	if err != nil {
+		// check db-specific error
 		if pgErr := dberror.GetError(err); pgErr != nil {
 			switch pgErr.Code {
 			case dberror.UniqueViolation:
@@ -68,13 +69,13 @@ func (s *service) CreateProduct(ctx context.Context, req payload.ProductCreateRe
 			}
 		}
 
-		return nil, ErrFailedCreateProduct(err)
+		return nil, err
 	}
 
 	var resp payload.ProductBaseResponse
 	err = s.mapper.ToResponse(created, &resp)
 	if err != nil {
-		return nil, apperror.ErrMapping(err)
+		return nil, err
 	}
 
 	return &resp, nil
@@ -117,7 +118,7 @@ func (s *service) GetAllProducts(ctx context.Context, req payload.ProductGetAllR
 	var resp []payload.ProductBaseResponse
 	err = s.mapper.ToResponse(products, &resp)
 	if err != nil {
-		return nil, nil, apperror.ErrMapping(err)
+		return nil, nil, err
 	}
 
 	return resp, response.NewPagination(req.Page, req.Size, &count), nil
@@ -140,7 +141,7 @@ func (s *service) GetProductByID(ctx context.Context, id uint) (*payload.Product
 	var resp payload.ProductBaseResponse
 	err = s.mapper.ToResponse(product, &resp)
 	if err != nil {
-		return nil, apperror.ErrMapping(err)
+		return nil, err
 	}
 
 	return &resp, nil
@@ -162,7 +163,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 
 	err = s.mapper.ToModel(req, &product)
 	if err != nil {
-		return nil, apperror.ErrMapping(err)
+		return nil, err
 	}
 
 	updated, err := s.uow.ProductRepository().Update(ctx, product)
@@ -173,7 +174,7 @@ func (s *service) UpdateProduct(ctx context.Context, id uint, req payload.Produc
 	var resp payload.ProductBaseResponse
 	err = s.mapper.ToResponse(updated, &resp)
 	if err != nil {
-		return nil, apperror.ErrMapping(err)
+		return nil, err
 	}
 
 	return &resp, nil
