@@ -11,7 +11,7 @@ import (
 	"github.com/aburizalpurnama/travel/internal/app/domain/product"
 )
 
-var tracer trace.Tracer = otel.Tracer("uow")
+var tracer trace.Tracer = otel.Tracer("repository.uow")
 
 // gormUnitOfWork implements the contract.UnitOfWork interface.
 // It acts as the main provider for repositories and transaction management.
@@ -22,8 +22,8 @@ type gormUnitOfWork struct {
 	productRepo contract.ProductRepository
 }
 
-// NewGormUnitOfWork creates a new UnitOfWork provider.
-func NewGormUnitOfWork(db *gorm.DB) contract.UnitOfWork {
+// NewGORMUnitOfWork creates a new UnitOfWork provider with GORM DB.
+func NewGORMUnitOfWork(db *gorm.DB) contract.UnitOfWork {
 	return &gormUnitOfWork{db: db}
 }
 
